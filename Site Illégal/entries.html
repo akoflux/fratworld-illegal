@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrées — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<div class="app-wrapper">
+  <div id="navbar"></div>
+
+  <main class="page-content">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Entrées</h1>
+        <p class="page-subtitle" id="entries-count">Chargement…</p>
+      </div>
+      <a href="/entry-form.html" class="btn btn-primary">+ Nouvelle entrée</a>
+    </div>
+
+    <!-- Toolbar : filtres + search + toggle -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+
+        <!-- Search -->
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="search-input"
+            class="search-input"
+            placeholder="Rechercher…"
+            autocomplete="off"
+          />
+        </div>
+
+        <!-- Filtre catégorie -->
+        <select id="filter-cat" class="filter-select">
+          <option value="">Toutes catégories</option>
+          <option value="Décision & position prise">Décision & position</option>
+          <option value="Ajout serveur (règle, mécanique)">Ajout serveur</option>
+          <option value="Fiche faction">Fiche faction</option>
+          <option value="Historique débat staff">Débat staff</option>
+        </select>
+
+        <!-- Filtre statut -->
+        <select id="filter-status" class="filter-select">
+          <option value="">Tous statuts</option>
+          <option value="Validé">Validé</option>
+          <option value="Refusé">Refusé</option>
+          <option value="En débat">En débat</option>
+        </select>
+
+        <!-- Filtre faction -->
+        <select id="filter-faction" class="filter-select">
+          <option value="">Toutes factions</option>
+          <option value="Cartel">Cartel</option>
+          <option value="Mafia">Mafia</option>
+          <option value="Groupe atypique">Groupe atypique</option>
+          <option value="Gang">Gang</option>
+          <option value="Toutes">Toutes</option>
+          <option value="Aucune">Aucune</option>
+        </select>
+
+      </div>
+
+      <div class="toolbar-right">
+        <!-- Toggle vue -->
+        <div class="view-toggle" title="Changer de vue">
+          <button class="view-toggle-btn" id="btn-view-cards" title="Vue cards">⊞</button>
+          <button class="view-toggle-btn" id="btn-view-table" title="Vue tableau">☰</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entries container -->
+    <div id="entries-container">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<script type="module" src="/js/page-entries.js"></script>
+</body>
+</html>

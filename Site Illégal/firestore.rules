@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserDoc().role == 'admin';
+    }
+
+    function isReferentOrAdmin() {
+      return isAuthenticated() &&
+             (getUserDoc().role == 'referent' || getUserDoc().role == 'admin');
+    }
+
+    // ── Collection : users ─────────────────────────────────────
+    // Seul l'admin peut créer / modifier / supprimer des comptes.
+    // Tout utilisateur authentifié peut lire (pour afficher les noms).
+    match /users/{userId} {
+      allow read:   if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Collection : entries ───────────────────────────────────
+    match /entries/{entryId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+
+      // Modification : admin OU auteur de l'entrée
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+
+      // Suppression : admin OU auteur de l'entrée
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+
+      // ── Sous-collection : history ──────────────────────────
+      // Lecture libre pour les authentifiés.
+      // Écriture réservée aux référents/admin.
+      // Modification et suppression interdites (journal immuable).
+      match /history/{historyId} {
+        allow read:          if isAuthenticated();
+        allow create:        if isReferentOrAdmin();
+        allow update, delete: if false;
+      }
+    }
+  }
+}

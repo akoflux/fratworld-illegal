@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tableau de bord — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<div class="app-wrapper">
+  <div id="navbar"></div>
+
+  <main class="page-content">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Tableau de bord</h1>
+        <p class="page-subtitle">Vue d'ensemble de l'activité du staff illégal</p>
+      </div>
+      <button id="new-entry-btn" class="btn btn-primary">+ Nouvelle entrée</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="dashboard-stats">
+      <div class="stat-card total">
+        <div class="stat-label">Total entrées</div>
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-sub">toutes catégories</div>
+      </div>
+      <div class="stat-card valid">
+        <div class="stat-label">Validées</div>
+        <div class="stat-value" id="stat-valid">—</div>
+        <div class="stat-sub">décisions actives</div>
+      </div>
+      <div class="stat-card refused">
+        <div class="stat-label">Refusées</div>
+        <div class="stat-value" id="stat-refused">—</div>
+        <div class="stat-sub">positions négatives</div>
+      </div>
+      <div class="stat-card debate">
+        <div class="stat-label">En débat</div>
+        <div class="stat-value" id="stat-debate">—</div>
+        <div class="stat-sub">à trancher</div>
+      </div>
+    </div>
+
+    <!-- Dashboard grid -->
+    <div class="dashboard-grid">
+
+      <!-- Répartition catégories -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Répartition par catégorie</span>
+        </div>
+        <div class="panel-body" id="breakdown-cat">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Répartition factions -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Répartition par faction</span>
+        </div>
+        <div class="panel-body" id="breakdown-fac">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Activité récente (full-width) -->
+      <div class="panel" style="grid-column: 1 / -1">
+        <div class="panel-header">
+          <span class="panel-title">Activité récente</span>
+          <a href="/entries.html" style="font-size:.8rem;color:var(--accent)">Voir tout →</a>
+        </div>
+        <div class="panel-body" id="activity-list">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script type="module" src="/js/page-dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-box">
+
+    <div class="login-logo">
+      <div class="logo-icon">⚔</div>
+      <h1>FratWorld RP</h1>
+      <p>Espace Staff Illégal</p>
+    </div>
+
+    <div class="login-error" id="login-error"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">Adresse email</label>
+        <input
+          type="email"
+          id="email"
+          class="form-control"
+          placeholder="referent@fratworld.rp"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input
+          type="password"
+          id="password"
+          class="form-control"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <button type="submit" id="submit-btn" class="btn btn-primary btn-login btn-lg">
+        Se connecter
+      </button>
+    </form>
+
+    <p style="margin-top:20px;text-align:center;font-size:.75rem;color:var(--text-muted)">
+      Accès réservé au staff illégal.<br>
+      Contacte un admin pour obtenir un compte.
+    </p>
+
+  </div>
+</div>
+
+<script type="module" src="/js/page-login.js"></script>
+</body>
+</html>
