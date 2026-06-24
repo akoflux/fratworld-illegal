@@ -1,103 +1,87 @@
 import { requireAuth } from "./auth.js";
-import { getEntries } from "./entries.js";
-import { renderNavbar, formatDate, statusClass, catBadge, statusBadge } from "./ui-shared.js";
+import { subscribeEntries } from "./entries.js";
+import { renderNavbar, formatDate, statusClass, statusBadge } from "./ui-shared.js";
 
-requireAuth(async (user, userData) => {
+let unsubscribe = null;
+
+requireAuth(async () => {
   renderNavbar("dashboard");
-  await loadDashboard();
-});
-
-async function loadDashboard() {
-  try {
-    const entries = await getEntries();
+  unsubscribe = subscribeEntries(entries => {
     renderStats(entries);
     renderBreakdown(entries);
     renderActivity(entries);
-    renderNewBtn();
-  } catch (err) {
-    console.error("Dashboard error:", err);
-  }
-}
+  });
+  document.getElementById("new-entry-btn").addEventListener("click", () => {
+    window.location.href = "/entry-form.html";
+  });
+});
+
+window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); });
 
 function renderStats(entries) {
-  const total   = entries.length;
-  const valid   = entries.filter(e => e.status === "Validé").length;
-  const refused = entries.filter(e => e.status === "Refusé").length;
-  const debate  = entries.filter(e => e.status === "En débat").length;
-
-  document.getElementById("stat-total").textContent   = total;
-  document.getElementById("stat-valid").textContent   = valid;
-  document.getElementById("stat-refused").textContent = refused;
-  document.getElementById("stat-debate").textContent  = debate;
+  document.getElementById("stat-total").textContent   = entries.length;
+  document.getElementById("stat-valid").textContent   = entries.filter(e => e.status === "Validé").length;
+  document.getElementById("stat-refused").textContent = entries.filter(e => e.status === "Refusé").length;
+  document.getElementById("stat-debate").textContent  = entries.filter(e => e.status === "En débat").length;
 }
 
 function renderBreakdown(entries) {
-  const CATEGORIES = [
-    "Décision & position prise",
-    "Ajout serveur (règle, mécanique)",
-    "Fiche faction",
-    "Historique débat staff"
-  ];
-
-  const FACTIONS = ["Cartel", "Mafia", "Groupe atypique", "Gang", "Toutes", "Aucune"];
-
-  const catCounts = {};
-  CATEGORIES.forEach(c => catCounts[c] = 0);
-  entries.forEach(e => { if (catCounts[e.category] !== undefined) catCounts[e.category]++; });
-
-  const catColors = {
-    "Décision & position prise":          "#4f86f7",
-    "Ajout serveur (règle, mécanique)":   "#22c55e",
-    "Fiche faction":                       "#c084fc",
-    "Historique débat staff":              "#f97316"
+  const CAT_COLORS = {
+    "Position officielle":    "#f97316",
+    "Règle tranchée":         "#fb923c",
+    "Historique débat":       "#fed7aa",
+    "Fiche faction":          "#c084fc",
+    "Règle faction":          "#a855f7",
+    "Accord inter-faction":   "#7c3aed",
+    "Proposition règlement":  "#22c55e",
+    "Idée mécanique":         "#4ade80",
+    "Ajout serveur (règle, mécanique)": "#86efac",
+    "Autre":                  "#6b7280",
+    "Décision & position prise":       "#f97316",
+    "Historique débat staff":          "#fed7aa"
   };
 
-  const catHtml = CATEGORIES.map(c => `
+  const catCounts = {};
+  entries.forEach(e => { catCounts[e.category] = (catCounts[e.category] || 0) + 1; });
+
+  const catHtml = Object.entries(catCounts).sort((a,b) => b[1]-a[1]).map(([cat, count]) => `
     <div class="breakdown-item">
       <div class="breakdown-label">
-        <div class="breakdown-dot" style="background:${catColors[c]}"></div>
-        <span>${c}</span>
+        <div class="breakdown-dot" style="background:${CAT_COLORS[cat] || "#6b7280"}"></div>
+        <span>${cat}</span>
       </div>
-      <span class="breakdown-count">${catCounts[c]}</span>
-    </div>
-  `).join("");
+      <span class="breakdown-count">${count}</span>
+    </div>`).join("") || `<div style="padding:14px 18px;color:var(--text-muted);font-size:.82rem">Aucune entrée</div>`;
 
   document.getElementById("breakdown-cat").innerHTML = catHtml;
 
-  const facCounts = {};
-  FACTIONS.forEach(f => facCounts[f] = 0);
-  entries.forEach(e => { if (facCounts[e.faction] !== undefined) facCounts[e.faction]++; });
+  const SECTION_COLORS = { decisions: "#f97316", factions: "#c084fc", propositions: "#22c55e" };
+  const SECTION_LABELS = { decisions: "Décisions", factions: "Factions", propositions: "Propositions" };
 
-  const facColors = {
-    "Cartel":         "#ef4444",
-    "Mafia":          "#f97316",
-    "Groupe atypique":"#eab308",
-    "Gang":           "#22c55e",
-    "Toutes":         "#4f86f7",
-    "Aucune":         "#6b7280"
-  };
+  const secCounts = { decisions: 0, factions: 0, propositions: 0 };
+  entries.forEach(e => {
+    const s = e.section || "decisions";
+    if (secCounts[s] !== undefined) secCounts[s]++;
+  });
 
-  const facHtml = FACTIONS
-    .filter(f => facCounts[f] > 0)
-    .map(f => `
-      <div class="breakdown-item">
-        <div class="breakdown-label">
-          <div class="breakdown-dot" style="background:${facColors[f]}"></div>
-          <span>${f}</span>
-        </div>
-        <span class="breakdown-count">${facCounts[f]}</span>
+  const secHtml = Object.entries(secCounts).map(([s, count]) => `
+    <div class="breakdown-item">
+      <div class="breakdown-label">
+        <div class="breakdown-dot" style="background:${SECTION_COLORS[s]}"></div>
+        <span>${SECTION_LABELS[s]}</span>
       </div>
-    `).join("") || `<div class="breakdown-item" style="color:var(--text-muted);font-size:.82rem">Aucune donnée</div>`;
+      <span class="breakdown-count">${count}</span>
+    </div>`).join("");
 
-  document.getElementById("breakdown-fac").innerHTML = facHtml;
+  document.getElementById("breakdown-fac").innerHTML = secHtml;
 }
 
 function renderActivity(entries) {
-  const recent = entries.slice(0, 10);
   const container = document.getElementById("activity-list");
+  const recent    = entries.slice(0, 12);
 
   if (!recent.length) {
-    container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:.82rem">Aucune activité récente</div>`;
+    container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:.82rem">Aucune activité</div>`;
     return;
   }
 
@@ -111,13 +95,6 @@ function renderActivity(entries) {
           <div class="activity-meta">${e.authorName} · ${e.category} · ${formatDate(e.createdAt)}</div>
         </div>
         ${statusBadge(e.status, !!e.replacedBy)}
-      </div>
-    `;
+      </div>`;
   }).join("");
-}
-
-function renderNewBtn() {
-  document.getElementById("new-entry-btn").addEventListener("click", () => {
-    window.location.href = "/entry-form.html";
-  });
 }

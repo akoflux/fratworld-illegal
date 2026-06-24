@@ -1,40 +1,49 @@
 import { requireAuth, canEdit } from "./auth.js";
 import { getEntry, getEntries, createEntry, updateEntry } from "./entries.js";
-import { renderNavbar, showToast, getParam } from "./ui-shared.js";
+import { renderNavbar, showToast, getParam, normalizeFactions } from "./ui-shared.js";
 
-let editMode    = false;
-let entryId     = null;
+let editMode      = false;
+let entryId       = null;
 let originalEntry = null;
-let allEntries  = [];
+let allEntries    = [];
+
+const SECTION_PARAM = getParam("section") || "decisions";
+
+const CATS_BY_SECTION = {
+  decisions:    ["Position officielle", "Règle tranchée", "Historique débat"],
+  factions:     ["Fiche faction", "Règle faction", "Accord inter-faction"],
+  propositions: ["Proposition règlement", "Idée mécanique", "Ajout serveur (règle, mécanique)", "Autre"]
+};
+
+const FACTIONS = ["Cartel", "Mafia", "MC / Groupe atypique", "Gang", "Indépendant", "Toutes"];
 
 requireAuth(async () => {
-  renderNavbar("entries");
+  renderNavbar("decisions");
 
-  entryId = getParam("id");
+  entryId  = getParam("id");
   editMode = !!entryId;
 
-  // Charger toutes les entrées pour le champ "remplace"
   allEntries = await getEntries();
 
   if (editMode) {
     originalEntry = await getEntry(entryId);
     if (!originalEntry) { window.location.href = "/entries.html"; return; }
-
-    // Vérifier les droits avant d'afficher
     if (!canEdit(originalEntry)) {
-      showToast("Tu n'as pas le droit de modifier cette entrée.", "error");
+      showToast("Tu n'as pas les droits pour modifier cette entrée.", "error");
       setTimeout(() => window.location.href = `/entry-detail.html?id=${entryId}`, 1200);
       return;
     }
-
-    document.getElementById("page-title").textContent      = "Modifier l'entrée";
+    document.getElementById("page-title").textContent       = "Modifier l'entrée";
     document.getElementById("breadcrumb-action").textContent = "Modifier";
-    prefillForm(originalEntry);
-  } else {
-    document.getElementById("page-title").textContent = "Nouvelle entrée";
+    document.getElementById("submit-btn").textContent        = "Enregistrer";
   }
 
-  populateReplacesSelect(editMode ? entryId : null);
+  const section = editMode ? (originalEntry.section || "decisions") : SECTION_PARAM;
+  buildCategorySelect(section);
+  buildFactionCheckboxes(editMode ? normalizeFactions(originalEntry.factions || originalEntry.faction) : []);
+  buildReplacesSelect(editMode ? entryId : null);
+
+  if (editMode) prefillForm(originalEntry);
 
   document.getElementById("entry-form").addEventListener("submit", handleSubmit);
   document.getElementById("cancel-btn").addEventListener("click", () => {
@@ -42,58 +51,72 @@ requireAuth(async () => {
   });
 });
 
-// ── Populate "remplace" select ─────────────────────────────────
-
-function populateReplacesSelect(excludeId) {
-  const select = document.getElementById("replaces");
-  const options = allEntries
-    .filter(e => e.id !== excludeId)
-    .map(e => {
-      const selected = originalEntry?.replaces === e.id ? "selected" : "";
-      return `<option value="${e.id}" ${selected}>${e.title}</option>`;
-    }).join("");
-
-  select.innerHTML = `<option value="">— Aucune —</option>` + options;
+function buildCategorySelect(section) {
+  const select = document.getElementById("category");
+  const cats   = CATS_BY_SECTION[section] || CATS_BY_SECTION.decisions;
+  select.innerHTML = `<option value="">— Sélectionner —</option>` +
+    cats.map(c => `<option value="${c}">${c}</option>`).join("");
+  document.getElementById("section-input").value = section;
 }
 
-// ── Prefill form for edit ──────────────────────────────────────
+function buildFactionCheckboxes(selected = []) {
+  const wrap = document.getElementById("faction-checkboxes");
+  wrap.innerHTML = FACTIONS.map(f => `
+    <label class="faction-check">
+      <input type="checkbox" name="factions" value="${f}" ${selected.includes(f) ? "checked" : ""} />
+      ${f}
+    </label>`).join("");
+}
+
+function buildReplacesSelect(excludeId) {
+  const select = document.getElementById("replaces");
+  const opts   = allEntries
+    .filter(e => e.id !== excludeId)
+    .map(e => {
+      const sel = originalEntry?.replaces === e.id ? "selected" : "";
+      return `<option value="${e.id}" ${sel}>${e.title}</option>`;
+    }).join("");
+  select.innerHTML = `<option value="">— Aucune —</option>` + opts;
+}
 
 function prefillForm(e) {
   document.getElementById("title").value       = e.title       || "";
-  document.getElementById("category").value    = e.category    || "";
   document.getElementById("status").value      = e.status      || "";
-  document.getElementById("faction").value     = e.faction     || "";
   document.getElementById("description").value = e.description || "";
-  // replaces is filled after populateReplacesSelect
+  if (e.category) {
+    const opt = document.querySelector(`#category option[value="${e.category}"]`);
+    if (opt) opt.selected = true;
+    else {
+      const extra = document.createElement("option");
+      extra.value = e.category; extra.textContent = e.category; extra.selected = true;
+      document.getElementById("category").appendChild(extra);
+    }
+  }
 }
 
-// ── Submit ─────────────────────────────────────────────────────
-
-async function handleSubmit(e) {
-  e.preventDefault();
+async function handleSubmit(ev) {
+  ev.preventDefault();
 
   const title       = document.getElementById("title").value.trim();
+  const section     = document.getElementById("section-input").value;
   const category    = document.getElementById("category").value;
   const status      = document.getElementById("status").value;
-  const faction     = document.getElementById("faction").value;
   const description = document.getElementById("description").value.trim();
   const replacesId  = document.getElementById("replaces").value;
+  const factions    = [...document.querySelectorAll('input[name="factions"]:checked')].map(cb => cb.value);
 
-  // Validation
-  if (!title)    { showToast("Le titre est requis.",    "error"); return; }
+  if (!title)    { showToast("Le titre est requis.", "error"); return; }
   if (!category) { showToast("La catégorie est requise.", "error"); return; }
-  if (!status)   { showToast("Le statut est requis.",   "error"); return; }
+  if (!status)   { showToast("Le statut est requis.", "error"); return; }
   if (!description) { showToast("La description est requise.", "error"); return; }
 
-  const replacesTitle = replacesId
-    ? (allEntries.find(e => e.id === replacesId)?.title || "")
-    : "";
+  const replacesTitle = replacesId ? (allEntries.find(e => e.id === replacesId)?.title || "") : "";
 
-  const submitBtn = document.getElementById("submit-btn");
-  submitBtn.disabled    = true;
-  submitBtn.textContent = editMode ? "Enregistrement…" : "Création…";
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement…";
 
-  const data = { title, category, status, faction, description, replaces: replacesId, replacesTitle };
+  const data = { title, section, category, status, description, factions, replaces: replacesId, replacesTitle };
 
   try {
     if (editMode) {
@@ -108,7 +131,7 @@ async function handleSubmit(e) {
   } catch (err) {
     showToast("Erreur lors de l'enregistrement.", "error");
     console.error(err);
-    submitBtn.disabled    = false;
-    submitBtn.textContent = editMode ? "Enregistrer" : "Créer l'entrée";
+    btn.disabled = false;
+    btn.textContent = editMode ? "Enregistrer" : "Créer l'entrée";
   }
 }

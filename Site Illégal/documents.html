@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documents — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .modal-overlay.open { display: flex !important; }
+    #doc-modal { display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;width:100%;max-width:460px;padding:20px; }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+  <div id="navbar"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Documents Illégaux</h1>
+        <p class="page-subtitle" id="doc-count">Chargement…</p>
+      </div>
+      <button id="new-doc-btn" class="btn btn-primary">+ Ajouter un document</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" style="margin-bottom:20px">
+      <div class="toolbar-left">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="search-input" placeholder="Rechercher un document…" autocomplete="off" />
+        </div>
+        <select id="filter-cat" class="filter-select">
+          <option value="">Toutes catégories</option>
+          <option value="Loi / Règle">Loi / Règle</option>
+          <option value="Procédure">Procédure</option>
+          <option value="Ressource">Ressource</option>
+          <option value="Formulaire">Formulaire</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="doc-list">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal overlay -->
+<div class="modal-overlay" id="doc-modal-overlay" style="display:none"></div>
+
+<!-- Modal ajout document -->
+<div id="doc-modal">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 style="margin-bottom:20px;font-size:1.1rem">Ajouter un document</h2>
+    <form id="doc-form">
+      <div class="form-group">
+        <label>Titre <span class="required">*</span></label>
+        <input id="doc-titre" type="text" class="form-control" placeholder="Nom du document" required />
+      </div>
+      <div class="form-group">
+        <label>URL <span class="required">*</span></label>
+        <input id="doc-url" type="url" class="form-control" placeholder="https://…" required />
+      </div>
+      <div class="form-group">
+        <label>Catégorie <span class="required">*</span></label>
+        <select id="doc-cat" class="form-control" required>
+          <option value="">— Sélectionner —</option>
+          <option value="Loi / Règle">Loi / Règle</option>
+          <option value="Procédure">Procédure</option>
+          <option value="Ressource">Ressource</option>
+          <option value="Formulaire">Formulaire</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input id="doc-desc" type="text" class="form-control" placeholder="Quelques mots pour identifier ce document…" />
+      </div>
+      <div class="form-actions">
+        <button type="button" id="doc-modal-cancel" class="btn btn-secondary">Annuler</button>
+        <button type="submit" id="doc-submit" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  const modal   = document.getElementById("doc-modal");
+  const overlay = document.getElementById("doc-modal-overlay");
+
+  document.getElementById("new-doc-btn").addEventListener("click", () => {
+    modal.style.display = "block"; overlay.style.display = "flex";
+  });
+  document.getElementById("doc-modal-cancel").addEventListener("click", () => {
+    modal.style.display = "none"; overlay.style.display = "none";
+  });
+  overlay.addEventListener("click", () => {
+    modal.style.display = "none"; overlay.style.display = "none";
+  });
+</script>
+<script type="module" src="/js/page-documents.js"></script>
+</body>
+</html>

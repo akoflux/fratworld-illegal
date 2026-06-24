@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dossiers Faction — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .dossiers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .modal-overlay.open { display: flex !important; }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+  <div id="navbar"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Dossiers Création Faction</h1>
+        <p class="page-subtitle">
+          <span id="active-count">0</span> en cours ·
+          <span id="archived-count">0</span> archivés ·
+          Seuil de validation : 3/5 votes
+        </p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="toggle-archived" class="btn btn-secondary">Voir l'historique</button>
+        <button id="new-dossier-btn" class="btn btn-primary">+ Nouveau dossier</button>
+      </div>
+    </div>
+
+    <!-- Dossiers actifs -->
+    <div id="dossiers-active" class="dossiers-grid" style="margin-bottom:24px">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Historique archivé -->
+    <div id="archived-section" style="display:none">
+      <h2 style="font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:14px">Historique</h2>
+      <div id="dossiers-archived" class="dossiers-grid"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal overlay (click outside) -->
+<div class="modal-overlay" id="dossier-modal-overlay" style="display:none"></div>
+
+<!-- Modal création dossier -->
+<div id="dossier-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;width:100%;max-width:480px;padding:20px">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 style="margin-bottom:20px;font-size:1.1rem">Nouveau dossier</h2>
+    <form id="dossier-form">
+      <div class="form-group">
+        <label>Nom du groupe <span class="required">*</span></label>
+        <input id="d-nom" type="text" class="form-control" placeholder="Ex : Los Diablos" required />
+      </div>
+      <div class="form-group">
+        <label>Type de groupe <span class="required">*</span></label>
+        <select id="d-type" class="form-control" required>
+          <option value="">— Sélectionner —</option>
+          <option value="Gang">Gang</option>
+          <option value="MC / Groupe atypique">MC / Groupe atypique</option>
+          <option value="Mafia">Mafia</option>
+          <option value="Cartel">Cartel</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Lien du dossier <span class="required">*</span></label>
+        <input id="d-lien" type="url" class="form-control" placeholder="https://docs.google.com/…" required />
+        <span class="form-hint">Lien vers le Google Doc, Notion, etc.</span>
+      </div>
+      <div class="form-group">
+        <label>Description courte</label>
+        <textarea id="d-desc" class="form-control" style="min-height:80px" placeholder="Quelques mots sur le groupe…"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="modal-cancel-btn" class="btn btn-secondary">Annuler</button>
+        <button type="submit" id="d-submit" class="btn btn-primary">Créer le dossier</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  // Gestion d'affichage du modal
+  const modal   = document.getElementById("dossier-modal");
+  const overlay = document.getElementById("dossier-modal-overlay");
+
+  document.addEventListener("click", e => {
+    const btn = document.getElementById("new-dossier-btn");
+    if (e.target === btn) {
+      modal.style.display   = "block";
+      overlay.style.display = "flex";
+    }
+    if (e.target === overlay) {
+      modal.style.display   = "none";
+      overlay.style.display = "none";
+    }
+  });
+
+  document.getElementById("modal-cancel-btn").addEventListener("click", () => {
+    modal.style.display   = "none";
+    overlay.style.display = "none";
+  });
+</script>
+<script type="module" src="/js/page-dossiers.js"></script>
+</body>
+</html>

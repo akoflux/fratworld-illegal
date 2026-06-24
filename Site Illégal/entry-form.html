@@ -7,13 +7,9 @@
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-
 <div class="app-wrapper">
   <div id="navbar"></div>
-
   <main class="page-content">
-
-    <!-- Page header -->
     <div class="page-header">
       <div class="page-header-left">
         <div class="breadcrumb">
@@ -25,24 +21,16 @@
       </div>
     </div>
 
-    <!-- Form -->
     <form id="entry-form">
       <div class="form-card">
 
-        <!-- Section principale -->
         <div class="form-section">
           <div class="form-section-title">Informations générales</div>
+          <input type="hidden" id="section-input" name="section" value="decisions" />
 
           <div class="form-group">
             <label for="title">Titre <span class="required">*</span></label>
-            <input
-              type="text"
-              id="title"
-              class="form-control"
-              placeholder="Titre clair et descriptif…"
-              maxlength="200"
-              required
-            />
+            <input type="text" id="title" class="form-control" placeholder="Titre clair et descriptif…" maxlength="200" required />
           </div>
 
           <div class="form-row">
@@ -50,13 +38,8 @@
               <label for="category">Catégorie <span class="required">*</span></label>
               <select id="category" class="form-control" required>
                 <option value="">— Sélectionner —</option>
-                <option value="Décision & position prise">Décision &amp; position prise</option>
-                <option value="Ajout serveur (règle, mécanique)">Ajout serveur (règle, mécanique)</option>
-                <option value="Fiche faction">Fiche faction</option>
-                <option value="Historique débat staff">Historique débat staff</option>
               </select>
             </div>
-
             <div class="form-group">
               <label for="status">Statut <span class="required">*</span></label>
               <select id="status" class="form-control" required>
@@ -69,63 +52,42 @@
           </div>
 
           <div class="form-group">
-            <label for="faction">Faction concernée</label>
-            <select id="faction" class="form-control">
-              <option value="Aucune">Aucune</option>
-              <option value="Cartel">Cartel</option>
-              <option value="Mafia">Mafia</option>
-              <option value="Groupe atypique">Groupe atypique</option>
-              <option value="Gang">Gang</option>
-              <option value="Toutes">Toutes</option>
-            </select>
+            <label>Factions concernées</label>
+            <div class="faction-checkboxes" id="faction-checkboxes">
+              <!-- Généré par JS -->
+            </div>
+            <span class="form-hint">Sélectionne une ou plusieurs factions. Laisse vide si non applicable.</span>
           </div>
         </div>
 
-        <!-- Description -->
         <div class="form-section">
           <div class="form-section-title">Description détaillée</div>
-
           <div class="form-group">
             <label for="description">Contenu <span class="required">*</span></label>
-            <textarea
-              id="description"
-              class="form-control"
-              placeholder="Décris la décision, la règle, la fiche… Sois précis et complet."
-              style="min-height:220px"
-              required
-            ></textarea>
-            <span class="form-hint">Le contenu peut être long. Markdown non rendu — texte brut uniquement.</span>
+            <textarea id="description" class="form-control" placeholder="Décris la décision, la règle, la fiche… Sois précis et complet." style="min-height:220px" required></textarea>
           </div>
         </div>
 
-        <!-- Supersession -->
         <div class="form-section">
           <div class="form-section-title">Liaison de décisions (optionnel)</div>
-
           <div class="form-group">
             <label for="replaces">Cette entrée remplace</label>
             <select id="replaces" class="form-control">
               <option value="">— Aucune —</option>
             </select>
-            <span class="form-hint">
-              Si cette entrée annule et remplace une précédente décision, sélectionne-la ici.
-              L'ancienne sera marquée "Remplacée" automatiquement.
-            </span>
+            <span class="form-hint">L'ancienne entrée sera automatiquement marquée "Remplacée".</span>
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="form-actions">
           <button type="button" id="cancel-btn" class="btn btn-secondary">Annuler</button>
-          <button type="submit"  id="submit-btn" class="btn btn-primary">Créer l'entrée</button>
+          <button type="submit" id="submit-btn" class="btn btn-primary">Créer l'entrée</button>
         </div>
 
       </div>
     </form>
-
   </main>
 </div>
-
 <script type="module" src="/js/page-form.js"></script>
 </body>
 </html>

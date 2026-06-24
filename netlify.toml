@@ -1,0 +1,8 @@
+[build]
+  base    = "Site Illégal"
+  publish = "Site Illégal"
+
+[[redirects]]
+  from   = "/"
+  to     = "/login.html"
+  status = 302
