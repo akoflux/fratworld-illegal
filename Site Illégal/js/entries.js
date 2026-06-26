@@ -3,7 +3,7 @@ import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import { sendDiscordNotification } from "./discord.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion
+  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -128,21 +128,33 @@ const VOTES_NEEDED = 3;
 export async function voteEntry(id, direction, currentFor, currentAgainst) {
   const { uid, name } = authorInfo();
 
-  const newFor     = direction === "for"     ? [...currentFor,     uid] : currentFor;
-  const newAgainst = direction === "against" ? [...currentAgainst, uid] : currentAgainst;
+  const hadVotedFor     = currentFor.includes(uid);
+  const hadVotedAgainst = currentAgainst.includes(uid);
 
   const update = { updatedAt: serverTimestamp() };
-  if (direction === "for")     update.votesFor     = arrayUnion(uid);
-  else                         update.votesAgainst = arrayUnion(uid);
+  if (direction === "for") {
+    update.votesFor = arrayUnion(uid);
+    if (hadVotedAgainst) update.votesAgainst = arrayRemove(uid);
+  } else {
+    update.votesAgainst = arrayUnion(uid);
+    if (hadVotedFor) update.votesFor = arrayRemove(uid);
+  }
+
+  // Recalcul des comptes après changement éventuel de camp
+  const newForCount = direction === "for"
+    ? (hadVotedFor ? currentFor.length : currentFor.length + 1)
+    : (hadVotedFor ? currentFor.length - 1 : currentFor.length);
+  const newAgainstCount = direction === "against"
+    ? (hadVotedAgainst ? currentAgainst.length : currentAgainst.length + 1)
+    : (hadVotedAgainst ? currentAgainst.length - 1 : currentAgainst.length);
 
   let finalStatus = null;
-
-  if (newFor.length >= VOTES_NEEDED) {
-    update.status   = "Validé";
-    finalStatus     = "Validé";
-  } else if (newAgainst.length >= VOTES_NEEDED) {
-    update.status   = "Refusé";
-    finalStatus     = "Refusé";
+  if (newForCount >= VOTES_NEEDED) {
+    update.status = "Validé";
+    finalStatus   = "Validé";
+  } else if (newAgainstCount >= VOTES_NEEDED) {
+    update.status = "Refusé";
+    finalStatus   = "Refusé";
   }
 
   await updateDoc(doc(db, "entries", id), update);

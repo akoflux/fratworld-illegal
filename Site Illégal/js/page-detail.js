@@ -171,12 +171,12 @@ function renderVoteSection(e) {
         ${!isClosed ? `
           <div class="vote-btns">
             <button id="vote-for-btn" class="btn vote-btn ${hasVotedFor ? 'vote-btn-active-for' : ''}"
-              ${isClosed ? "disabled" : ""}>
-              👍 Pour ${hasVotedFor ? "(voté)" : ""}
+              ${hasVotedFor ? "disabled" : ""}>
+              👍 Pour ${hasVotedFor ? "✓" : hasVotedAgainst ? "(changer)" : ""}
             </button>
             <button id="vote-against-btn" class="btn vote-btn ${hasVotedAgainst ? 'vote-btn-active-against' : ''}"
-              ${isClosed ? "disabled" : ""}>
-              👎 Contre ${hasVotedAgainst ? "(voté)" : ""}
+              ${hasVotedAgainst ? "disabled" : ""}>
+              👎 Contre ${hasVotedAgainst ? "✓" : hasVotedFor ? "(changer)" : ""}
             </button>
           </div>
         ` : ""}
@@ -211,7 +211,7 @@ async function handleVote(e, direction) {
 
   if (direction === "for"     && alreadyFor)     { showToast("Tu as déjà voté Pour.", "error"); return; }
   if (direction === "against" && alreadyAgainst) { showToast("Tu as déjà voté Contre.", "error"); return; }
-  if (alreadyFor || alreadyAgainst) { showToast("Tu as déjà voté sur cette proposition.", "error"); return; }
+  // Changer de camp (Pour → Contre ou Contre → Pour) est autorisé
 
   const forBtn     = document.getElementById("vote-for-btn");
   const againstBtn = document.getElementById("vote-against-btn");

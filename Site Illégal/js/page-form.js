@@ -25,8 +25,13 @@ requireAuth(async () => {
   editMode = !!entryId;
 
   let factionNames = FACTIONS_FALLBACK;
-  try { factionNames = await getFactionNames(); if (!factionNames.length) factionNames = FACTIONS_FALLBACK; }
-  catch(_) { factionNames = FACTIONS_FALLBACK; }
+  try {
+    const fromFirestore = await getFactionNames();
+    if (fromFirestore.length) {
+      // Garde "Toutes" toujours disponible en dernière option
+      factionNames = fromFirestore.includes("Toutes") ? fromFirestore : [...fromFirestore, "Toutes"];
+    }
+  } catch(_) { factionNames = FACTIONS_FALLBACK; }
 
   allEntries = await getEntries();
 
