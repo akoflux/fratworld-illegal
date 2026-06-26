@@ -2,7 +2,7 @@ import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, serverTimestamp
+  onSnapshot, query, orderBy, serverTimestamp, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -45,18 +45,24 @@ export async function deleteFaction(id) {
   await deleteDoc(doc(db, "factions", id));
 }
 
+// onSnapshot avec gestion d'erreur : si Firestore refuse, callback([]) est appelé
 export function subscribeFactions(callback) {
   const q = query(collection(db, "factions"), orderBy("nom", "asc"));
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
+  return onSnapshot(
+    q,
+    snap => { callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))); },
+    err  => { console.error("subscribeFactions:", err.message); callback([]); }
+  );
 }
 
+// getDocs (one-shot) avec fallback silencieux
 export async function getFactionNames() {
-  return new Promise(resolve => {
-    const unsub = subscribeFactions(factions => {
-      unsub();
-      resolve(factions.map(f => f.nom));
-    });
-  });
+  try {
+    const q    = query(collection(db, "factions"), orderBy("nom", "asc"));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => d.data().nom);
+  } catch (err) {
+    console.warn("getFactionNames fallback:", err.message);
+    return [];
+  }
 }

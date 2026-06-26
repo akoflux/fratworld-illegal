@@ -43,9 +43,14 @@ requireAuth(async () => {
     document.getElementById("submit-btn").textContent        = "Enregistrer";
   }
 
-  const section = editMode ? (originalEntry.section || "decisions") : SECTION_PARAM;
+  const section = editMode ? (originalEntry.section || SECTION_PARAM) : SECTION_PARAM;
+  // Re-render navbar with correct section (important en mode édition)
+  renderNavbar(section);
   buildCategorySelect(section);
-  buildFactionCheckboxes(editMode ? normalizeFactions(originalEntry.factions || originalEntry.faction) : [], factionNames);
+  buildFactionCheckboxes(
+    editMode ? normalizeFactions(originalEntry.factions || originalEntry.faction) : [],
+    factionNames
+  );
   buildReplacesSelect(editMode ? entryId : null);
 
   if (editMode) prefillForm(originalEntry);

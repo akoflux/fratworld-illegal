@@ -142,7 +142,7 @@ function renderCards(entries, container) {
     const facHtml  = factionBadges(e.factions || e.faction);
     return `
       <div class="entry-card ${replaced ? "is-replaced" : ""}"
-           onclick="window.location.href='/entry-detail.html?id=${e.id}'">
+           onclick="window.location.href='/entry-detail.html?id=${e.id}&section=${SECTION_KEY}'">
         <div class="card-status-bar ${cls}"></div>
         <div class="card-body">
           <div class="card-header">
@@ -165,7 +165,7 @@ function renderCards(entries, container) {
           <div class="card-actions" onclick="event.stopPropagation()">
             ${canEdit(e) ? `
               <button class="btn-icon" title="Modifier"
-                onclick="event.stopPropagation();window.location.href='/entry-form.html?id=${e.id}'">✎</button>
+                onclick="event.stopPropagation();window.location.href='/entry-form.html?id=${e.id}&section=${SECTION_KEY}'">✎</button>
               <button class="btn-icon danger" title="Supprimer"
                 onclick="event.stopPropagation();handleDelete('${e.id}','${esc(e.title)}')">✕</button>
             ` : ""}
@@ -182,7 +182,7 @@ function renderTable(entries, container) {
     const facHtml  = factionBadges(e.factions || e.faction);
     return `
       <tr class="${replaced ? "is-replaced" : ""}"
-          onclick="window.location.href='/entry-detail.html?id=${e.id}'">
+          onclick="window.location.href='/entry-detail.html?id=${e.id}&section=${SECTION_KEY}'">
         <td class="table-title">${e.title}${replaced ? `<small>Remplacée</small>` : ""}</td>
         <td>${catBadge(e.category)}</td>
         <td>${statusBadge(e.status, replaced)}</td>
@@ -191,7 +191,7 @@ function renderTable(entries, container) {
         <td style="color:var(--text-muted);font-size:.78rem;white-space:nowrap">${formatDate(e.createdAt)}</td>
         <td class="table-actions" onclick="event.stopPropagation()">
           ${canEdit(e) ? `
-            <button class="btn-icon" onclick="window.location.href='/entry-form.html?id=${e.id}'">✎</button>
+            <button class="btn-icon" onclick="window.location.href='/entry-form.html?id=${e.id}&section=${SECTION_KEY}'">✎</button>
             <button class="btn-icon danger" onclick="handleDelete('${e.id}','${esc(e.title)}')">✕</button>
           ` : ""}
         </td>

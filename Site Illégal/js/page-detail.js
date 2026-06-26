@@ -19,6 +19,8 @@ requireAuth(async () => {
   try {
     entry = await getEntry(id);
     if (!entry) { window.location.href = "/entries.html"; return; }
+    // Re-render navbar with actual section from the entry data
+    if (entry.section && entry.section !== section) renderNavbar(entry.section);
     renderEntry(entry);
     loadHistory(id);
   } catch (err) {
@@ -35,7 +37,7 @@ function renderEntry(e) {
   const actionsEl = document.getElementById("entry-actions");
   if (canEdit(e)) {
     actionsEl.innerHTML = `
-      <a href="/entry-form.html?id=${e.id}" class="btn btn-secondary">✎ Modifier</a>
+      <a href="/entry-form.html?id=${e.id}&section=${e.section||'decisions'}" class="btn btn-secondary">✎ Modifier</a>
       <button class="btn btn-danger" id="delete-btn">✕ Supprimer</button>
     `;
     document.getElementById("delete-btn").addEventListener("click", handleDelete);
