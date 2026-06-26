@@ -15,7 +15,7 @@ let viewMode   = localStorage.getItem("fw-view") || "cards";
 let unsubscribe = null;
 
 requireAuth(async () => {
-  renderNavbar("decisions");
+  renderNavbar(SECTION_KEY);
   setupViewToggle();
   setSectionTab(SECTION_KEY);
   showSpinner("entries-container");
@@ -160,6 +160,7 @@ function renderCards(entries, container) {
             <span>✎ ${e.authorName}</span>
             <span>·</span>
             <span>${formatDate(e.createdAt)}</span>
+            ${SECTION_KEY === "propositions" ? `<span>·</span><span style="color:#22c55e">👍${(e.votesFor||[]).length}</span><span style="color:#ef4444">👎${(e.votesAgainst||[]).length}</span>` : ""}
           </div>
           <div class="card-actions" onclick="event.stopPropagation()">
             ${canEdit(e) ? `

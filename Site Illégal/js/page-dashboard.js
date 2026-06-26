@@ -9,6 +9,7 @@ requireAuth(async () => {
   unsubscribe = subscribeEntries(entries => {
     renderStats(entries);
     renderBreakdown(entries);
+    renderVotes(entries);
     renderActivity(entries);
   });
   document.getElementById("new-entry-btn").addEventListener("click", () => {
@@ -74,6 +75,59 @@ function renderBreakdown(entries) {
     </div>`).join("");
 
   document.getElementById("breakdown-fac").innerHTML = secHtml;
+}
+
+const VOTES_NEEDED = 3;
+
+function renderVotes(entries) {
+  const container = document.getElementById("votes-list");
+  if (!container) return;
+
+  const open = entries.filter(e =>
+    e.section === "propositions" &&
+    e.status !== "Validé" &&
+    e.status !== "Refusé"
+  );
+
+  if (!open.length) {
+    container.innerHTML = `<div style="padding:18px;text-align:center;color:var(--text-muted);font-size:.82rem">Aucun vote en cours.</div>`;
+    return;
+  }
+
+  container.innerHTML = open.map(e => {
+    const vFor     = (e.votesFor     || []).length;
+    const vAgainst = (e.votesAgainst || []).length;
+    const pctFor     = Math.min(100, Math.round((vFor     / VOTES_NEEDED) * 100));
+    const pctAgainst = Math.min(100, Math.round((vAgainst / VOTES_NEEDED) * 100));
+
+    return `
+      <div class="activity-item" style="flex-direction:column;align-items:stretch;gap:8px;cursor:pointer"
+           onclick="window.location.href='/entry-detail.html?id=${e.id}&section=propositions'">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div class="activity-title">${e.title}</div>
+            <div class="activity-meta">${e.category} · ${e.authorName} · ${formatDate(e.createdAt)}</div>
+          </div>
+          <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">${vFor + vAgainst} vote(s)</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div class="vote-bar-row" style="font-size:.75rem">
+            <span class="vote-bar-label" style="min-width:40px">Pour</span>
+            <div class="vote-bar-track" style="flex:1;height:6px">
+              <div class="vote-bar-fill vote-for" style="width:${pctFor}%;height:6px"></div>
+            </div>
+            <span class="vote-bar-count" style="min-width:32px;text-align:right">${vFor}/${VOTES_NEEDED}</span>
+          </div>
+          <div class="vote-bar-row" style="font-size:.75rem">
+            <span class="vote-bar-label" style="min-width:40px">Contre</span>
+            <div class="vote-bar-track" style="flex:1;height:6px">
+              <div class="vote-bar-fill vote-against" style="width:${pctAgainst}%;height:6px"></div>
+            </div>
+            <span class="vote-bar-count" style="min-width:32px;text-align:right">${vAgainst}/${VOTES_NEEDED}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
 }
 
 function renderActivity(entries) {

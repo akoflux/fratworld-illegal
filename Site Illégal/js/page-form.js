@@ -1,5 +1,6 @@
 import { requireAuth, canEdit } from "./auth.js";
 import { getEntry, getEntries, createEntry, updateEntry } from "./entries.js";
+import { getFactionNames } from "./factions-list.js";
 import { renderNavbar, showToast, getParam, normalizeFactions } from "./ui-shared.js";
 
 let editMode      = false;
@@ -15,13 +16,17 @@ const CATS_BY_SECTION = {
   propositions: ["Proposition règlement", "Idée mécanique", "Ajout serveur (règle, mécanique)", "Autre"]
 };
 
-const FACTIONS = ["Cartel", "Mafia", "MC / Groupe atypique", "Gang", "Indépendant", "Toutes"];
+const FACTIONS_FALLBACK = ["Cartel", "Mafia", "MC / Groupe atypique", "Gang", "Indépendant", "Toutes"];
 
 requireAuth(async () => {
-  renderNavbar("decisions");
+  renderNavbar(SECTION_PARAM);
 
   entryId  = getParam("id");
   editMode = !!entryId;
+
+  let factionNames = FACTIONS_FALLBACK;
+  try { factionNames = await getFactionNames(); if (!factionNames.length) factionNames = FACTIONS_FALLBACK; }
+  catch(_) { factionNames = FACTIONS_FALLBACK; }
 
   allEntries = await getEntries();
 
@@ -40,7 +45,7 @@ requireAuth(async () => {
 
   const section = editMode ? (originalEntry.section || "decisions") : SECTION_PARAM;
   buildCategorySelect(section);
-  buildFactionCheckboxes(editMode ? normalizeFactions(originalEntry.factions || originalEntry.faction) : []);
+  buildFactionCheckboxes(editMode ? normalizeFactions(originalEntry.factions || originalEntry.faction) : [], factionNames);
   buildReplacesSelect(editMode ? entryId : null);
 
   if (editMode) prefillForm(originalEntry);
@@ -59,9 +64,9 @@ function buildCategorySelect(section) {
   document.getElementById("section-input").value = section;
 }
 
-function buildFactionCheckboxes(selected = []) {
+function buildFactionCheckboxes(selected = [], list = FACTIONS_FALLBACK) {
   const wrap = document.getElementById("faction-checkboxes");
-  wrap.innerHTML = FACTIONS.map(f => `
+  wrap.innerHTML = list.map(f => `
     <label class="faction-check">
       <input type="checkbox" name="factions" value="${f}" ${selected.includes(f) ? "checked" : ""} />
       ${f}

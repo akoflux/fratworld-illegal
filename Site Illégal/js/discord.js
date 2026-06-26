@@ -19,37 +19,56 @@ const CAT_EMOJI = {
   "Historique débat staff":        "📜"
 };
 
-// type : "create" | "status_change"
-// entry : { id, title, category, status, faction, authorName }
+// type : "create" | "status_change" | "vote_result"
+// entry : { id, title, category, status, factions, authorName, votesFor, votesAgainst }
 export async function sendDiscordNotification(type, entry) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("VOTRE_WEBHOOK_ICI")) return;
 
   const color  = STATUS_COLORS[entry.status] ?? 0x4f86f7;
   const catIco = CAT_EMOJI[entry.category]   ?? "📋";
   const stIco  = STATUS_EMOJI[entry.status]  ?? "•";
-  const url    = `${SITE_URL}/entry-detail.html?id=${entry.id}`;
+  const url    = `${SITE_URL}/entry-detail.html?id=${entry.id}&section=${entry.section || "propositions"}`;
 
-  const title = type === "create"
-    ? `${catIco} Nouvelle entrée — ${entry.title}`
-    : `🔄 Statut modifié — ${entry.title}`;
+  const factionVal = Array.isArray(entry.factions) && entry.factions.length
+    ? entry.factions.join(", ")
+    : (entry.faction || "Aucune");
 
-  const description = type === "create"
-    ? `Une nouvelle entrée a été créée par **${entry.authorName}**.`
-    : `Le statut a été mis à jour vers **${entry.status}** par **${entry.authorName}**.`;
+  let title, description, fields;
+
+  if (type === "vote_result") {
+    const isValid = entry.status === "Validé";
+    title       = `${isValid ? "✅" : "❌"} Proposition ${entry.status} — ${entry.title}`;
+    description = `La proposition a été **${entry.status}** après vote du staff.`;
+    fields = [
+      { name: "Catégorie",  value: entry.category || "—",             inline: true },
+      { name: "Votes Pour", value: String((entry.votesFor || []).length),     inline: true },
+      { name: "Votes Contre", value: String((entry.votesAgainst || []).length), inline: true },
+      { name: "Faction(s)", value: factionVal,                         inline: true }
+    ];
+  } else if (type === "create") {
+    title       = `${catIco} Nouvelle entrée — ${entry.title}`;
+    description = `Une nouvelle entrée a été créée par **${entry.authorName}**.`;
+    fields = [
+      { name: "Catégorie",      value: entry.category || "—",  inline: true },
+      { name: `Statut ${stIco}`, value: entry.status || "—",   inline: true },
+      { name: "Faction(s)",     value: factionVal,             inline: true },
+      { name: "Auteur",         value: entry.authorName,       inline: true }
+    ];
+  } else {
+    title       = `🔄 Statut modifié — ${entry.title}`;
+    description = `Le statut a été mis à jour vers **${entry.status}** par **${entry.authorName}**.`;
+    fields = [
+      { name: "Catégorie",      value: entry.category || "—",  inline: true },
+      { name: `Statut ${stIco}`, value: entry.status || "—",   inline: true },
+      { name: "Faction(s)",     value: factionVal,             inline: true },
+      { name: "Auteur",         value: entry.authorName,       inline: true }
+    ];
+  }
 
   const payload = {
     embeds: [{
-      title,
-      description,
-      color,
-      url,
-      fields: [
-        { name: "Catégorie",         value: entry.category,        inline: true },
-        { name: `Statut ${stIco}`,   value: entry.status,          inline: true },
-        { name: "Faction",           value: entry.faction || "Aucune", inline: true },
-        { name: "Auteur",            value: entry.authorName,      inline: true }
-      ],
-      footer: { text: "FratWorld RP — Staff Illégal" },
+      title, description, color, url, fields,
+      footer:    { text: "FratWorld RP — Staff Illégal" },
       timestamp: new Date().toISOString()
     }]
   };

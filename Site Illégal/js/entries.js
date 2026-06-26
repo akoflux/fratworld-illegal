@@ -3,7 +3,7 @@ import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import { sendDiscordNotification } from "./discord.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp
+  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -121,6 +121,45 @@ export function subscribeEntries(callback) {
     const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     callback(entries);
   });
+}
+
+const VOTES_NEEDED = 3;
+
+export async function voteEntry(id, direction, currentFor, currentAgainst) {
+  const { uid, name } = authorInfo();
+
+  const newFor     = direction === "for"     ? [...currentFor,     uid] : currentFor;
+  const newAgainst = direction === "against" ? [...currentAgainst, uid] : currentAgainst;
+
+  const update = { updatedAt: serverTimestamp() };
+  if (direction === "for")     update.votesFor     = arrayUnion(uid);
+  else                         update.votesAgainst = arrayUnion(uid);
+
+  let finalStatus = null;
+
+  if (newFor.length >= VOTES_NEEDED) {
+    update.status   = "Validé";
+    finalStatus     = "Validé";
+  } else if (newAgainst.length >= VOTES_NEEDED) {
+    update.status   = "Refusé";
+    finalStatus     = "Refusé";
+  }
+
+  await updateDoc(doc(db, "entries", id), update);
+  await addHistory(id, "update", [{
+    field: direction === "for" ? "votesFor" : "votesAgainst",
+    oldValue: null,
+    newValue: `${name} a voté ${direction === "for" ? "Pour" : "Contre"}`
+  }]);
+
+  if (finalStatus) {
+    const snap = await getDoc(doc(db, "entries", id));
+    const full = { id: snap.id, ...snap.data() };
+    await sendDiscordNotification("vote_result", { ...full, authorName: name });
+  }
+
+  const snap = await getDoc(doc(db, "entries", id));
+  return { id: snap.id, ...snap.data() };
 }
 
 export async function getHistory(entryId) {

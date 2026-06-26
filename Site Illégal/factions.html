@@ -5,16 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Factions — FratWorld Staff</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .factions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    #faction-modal {
+      display: none; position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); z-index: 501;
+      width: 100%; max-width: 460px; padding: 16px;
+    }
+    #modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 500;
+    }
+  </style>
 </head>
 <body>
 <div class="app-wrapper">
   <div id="navbar"></div>
   <main class="page-content">
-    <!-- Redirige vers entries.html?section=factions -->
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Factions</h1>
+        <p class="page-subtitle" id="faction-count">Chargement…</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a href="/entries.html?section=factions" class="btn btn-secondary">Fiches &amp; Règles →</a>
+        <button id="new-faction-btn" class="btn btn-primary">+ Nouvelle faction</button>
+      </div>
+    </div>
+
+    <div id="factions-grid" class="factions-grid">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
   </main>
 </div>
-<script type="module">
-  window.location.replace("/entries.html?section=factions");
-</script>
+
+<!-- Overlay -->
+<div id="modal-overlay"></div>
+
+<!-- Modal faction -->
+<div id="faction-modal">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 id="modal-title" style="margin-bottom:20px;font-size:1.05rem">Nouvelle faction</h2>
+    <form id="faction-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nom <span class="required">*</span></label>
+          <input id="f-nom" type="text" class="form-control" placeholder="Vagos, Ballas…" required />
+        </div>
+        <div class="form-group">
+          <label>Type <span class="required">*</span></label>
+          <select id="f-type" class="form-control" required>
+            <option value="">— Sélectionner —</option>
+            <option value="Gang">Gang</option>
+            <option value="MC / Groupe atypique">MC / Groupe atypique</option>
+            <option value="Mafia">Mafia</option>
+            <option value="Cartel">Cartel</option>
+            <option value="Indépendant">Indépendant</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Lead</label>
+          <input id="f-lead" type="text" class="form-control" placeholder="Prénom Nom" />
+        </div>
+        <div class="form-group">
+          <label>Co-Lead</label>
+          <input id="f-colead" type="text" class="form-control" placeholder="Prénom Nom" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Business / Activité principale</label>
+        <input id="f-business" type="text" class="form-control" placeholder="Trafic de drogue, blanchiment…" />
+      </div>
+      <div class="form-actions">
+        <button type="button" id="faction-form-cancel" class="btn btn-secondary">Annuler</button>
+        <button type="submit" id="faction-submit" class="btn btn-primary">Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/js/page-factions.js"></script>
 </body>
 </html>

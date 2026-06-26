@@ -62,5 +62,13 @@ service cloud.firestore {
                        (isReferentOrAdmin() &&
                         resource.data.authorUid == request.auth.uid);
     }
+
+    // ── factions ───────────────────────────────────────────────
+    match /factions/{factionId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isReferentOrAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

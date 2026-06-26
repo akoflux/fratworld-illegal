@@ -1547,3 +1547,43 @@ mark.hl {
 @media (max-width: 480px) {
   .dashboard-stats { grid-template-columns: 1fr; }
 }
+
+/* ── Vote ───────────────────────────────────────────────────── */
+
+.vote-card { border-left: 3px solid #f97316; }
+
+.vote-bars { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+.vote-bar-row {
+  display: flex; align-items: center; gap: 10px; font-size: .8rem;
+}
+.vote-bar-label {
+  min-width: 45px; color: var(--text-secondary); font-weight: 600;
+}
+.vote-bar-track {
+  flex: 1; height: 8px; background: var(--border); border-radius: 99px; overflow: hidden;
+}
+.vote-bar-fill {
+  height: 100%; border-radius: 99px; transition: width .4s ease;
+}
+.vote-for     { background: #22c55e; }
+.vote-against { background: #ef4444; }
+.vote-bar-count { min-width: 36px; text-align: right; color: var(--text-muted); font-size: .75rem; }
+
+.vote-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+
+.vote-btn {
+  padding: 8px 20px; border-radius: 8px; font-size: .85rem; font-weight: 600; cursor: pointer;
+  background: var(--bg-card); color: var(--text-secondary);
+  border: 1px solid var(--border); transition: all .15s;
+}
+.vote-btn:hover { border-color: var(--accent); color: var(--accent); }
+.vote-btn-active-for    { background: rgba(34,197,94,.15);  color: #22c55e; border-color: #22c55e; }
+.vote-btn-active-against { background: rgba(239,68,68,.15); color: #ef4444; border-color: #ef4444; }
+
+.vote-closed-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 99px;
+  font-size: .8rem; font-weight: 700; margin-bottom: 12px;
+}
+.vote-closed-ok      { background: rgba(34,197,94,.15);  color: #22c55e; border: 1px solid #22c55e40; }
+.vote-closed-refuse  { background: rgba(239,68,68,.15);  color: #ef4444; border: 1px solid #ef444440; }

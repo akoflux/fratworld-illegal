@@ -1,14 +1,16 @@
-import { requireAuth, canEdit } from "./auth.js";
-import { getEntry, getHistory, deleteEntry } from "./entries.js";
+import { requireAuth, canEdit, getCurrentUser, getCurrentUserData } from "./auth.js";
+import { getEntry, getHistory, deleteEntry, voteEntry } from "./entries.js";
 import {
   renderNavbar, showToast, confirmModal, formatDate,
-  statusBadge, catBadge, factionBadge, getParam, showSpinner
+  statusBadge, catBadge, factionBadges, normalizeFactions, getParam, showSpinner
 } from "./ui-shared.js";
 
 let entry = null;
 
 requireAuth(async () => {
-  renderNavbar("entries");
+  const section = getParam("section") || "decisions";
+  renderNavbar(section);
+
   const id = getParam("id");
   if (!id) { window.location.href = "/entries.html"; return; }
 
@@ -28,10 +30,8 @@ requireAuth(async () => {
 function renderEntry(e) {
   document.title = `${e.title} — FratWorld Staff`;
 
-  // Breadcrumb
   document.getElementById("breadcrumb-title").textContent = e.title;
 
-  // Actions
   const actionsEl = document.getElementById("entry-actions");
   if (canEdit(e)) {
     actionsEl.innerHTML = `
@@ -41,26 +41,28 @@ function renderEntry(e) {
     document.getElementById("delete-btn").addEventListener("click", handleDelete);
   }
 
-  // Header
-  const replaced = !!e.replacedBy;
+  const replaced  = !!e.replacedBy;
+  const factions  = normalizeFactions(e.factions || e.faction);
+  const facHtml   = factionBadges(factions);
+  const isPropo   = (e.section === "propositions");
+
   document.getElementById("entry-main").innerHTML = `
     <div class="detail-header">
       <div class="detail-header-left">
-        <h1 class="detail-title">${e.title}</h1>
+        <h1 class="detail-title">${escapeHtml(e.title)}</h1>
         <div class="detail-meta-row">
           ${statusBadge(e.status, replaced)}
           ${catBadge(e.category)}
-          ${factionBadge(e.faction)}
+          ${facHtml}
         </div>
       </div>
     </div>
 
-    <!-- Supersession -->
     ${e.replaces ? `
       <div class="detail-card" style="margin-bottom:14px;border-left:3px solid var(--s-debate)">
         <div class="card-content" style="padding:14px 18px;font-size:.85rem;color:var(--text-secondary)">
           ⬆ Cette entrée <strong>remplace</strong> :
-          <a href="/entry-detail.html?id=${e.replaces}">${e.replacesTitle || e.replaces}</a>
+          <a href="/entry-detail.html?id=${e.replaces}&section=${e.section||'decisions'}">${escapeHtml(e.replacesTitle || e.replaces)}</a>
         </div>
       </div>
     ` : ""}
@@ -68,19 +70,18 @@ function renderEntry(e) {
       <div class="detail-card" style="margin-bottom:14px;border-left:3px solid var(--s-replaced)">
         <div class="card-content" style="padding:14px 18px;font-size:.85rem;color:var(--text-muted)">
           ⚠ Cette entrée est <strong>remplacée par</strong> :
-          <a href="/entry-detail.html?id=${e.replacedBy}">${e.replacedByTitle || e.replacedBy}</a>
+          <a href="/entry-detail.html?id=${e.replacedBy}&section=${e.section||'decisions'}">${escapeHtml(e.replacedByTitle || e.replacedBy)}</a>
         </div>
       </div>
     ` : ""}
 
-    <!-- Metadata -->
     <div class="detail-card">
       <div class="card-header-bar"><h3>Informations</h3></div>
       <div class="card-content">
         <div class="info-grid">
           <div class="info-item">
             <div class="info-label">Auteur</div>
-            <div class="info-value">${e.authorName}</div>
+            <div class="info-value">${escapeHtml(e.authorName)}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Créée le</div>
@@ -95,18 +96,17 @@ function renderEntry(e) {
             <div class="info-value">${statusBadge(e.status, replaced)}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">Faction</div>
-            <div class="info-value">${e.faction || "Aucune"}</div>
+            <div class="info-label">Factions</div>
+            <div class="info-value">${facHtml || "Aucune"}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Catégorie</div>
-            <div class="info-value">${e.category}</div>
+            <div class="info-value">${escapeHtml(e.category)}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Description -->
     <div class="detail-card">
       <div class="card-header-bar"><h3>Description</h3></div>
       <div class="card-content">
@@ -114,21 +114,125 @@ function renderEntry(e) {
       </div>
     </div>
 
-    <!-- History placeholder -->
+    ${isPropo ? renderVoteSection(e) : ""}
+
     <div class="detail-card" id="history-card">
-      <div class="card-header-bar">
-        <h3>Historique des modifications</h3>
-      </div>
+      <div class="card-header-bar"><h3>Historique des modifications</h3></div>
       <div id="history-body">
         <div class="spinner-wrap"><div class="spinner"></div></div>
       </div>
     </div>
   `;
+
+  if (isPropo) setupVoteButtons(e);
 }
+
+// ── Vote ──────────────────────────────────────────────────────
+
+function renderVoteSection(e) {
+  const votesFor     = e.votesFor     || [];
+  const votesAgainst = e.votesAgainst || [];
+  const VOTES_NEEDED = 3;
+
+  const uid = getCurrentUser()?.uid;
+  const hasVotedFor     = votesFor.includes(uid);
+  const hasVotedAgainst = votesAgainst.includes(uid);
+  const isClosed = e.status === "Validé" || e.status === "Refusé";
+
+  const pctFor     = Math.min(100, Math.round((votesFor.length     / VOTES_NEEDED) * 100));
+  const pctAgainst = Math.min(100, Math.round((votesAgainst.length / VOTES_NEEDED) * 100));
+
+  return `
+    <div class="detail-card vote-card" id="vote-section">
+      <div class="card-header-bar">
+        <h3>Vote de la proposition</h3>
+        <span style="font-size:.78rem;color:var(--text-muted)">${VOTES_NEEDED} votes requis pour validation/refus</span>
+      </div>
+      <div class="card-content" style="padding:18px">
+        ${isClosed ? `<div class="vote-closed-badge ${e.status === 'Validé' ? 'vote-closed-ok' : 'vote-closed-refuse'}">${e.status === 'Validé' ? '✅ Validé' : '❌ Refusé'}</div>` : ""}
+        <div class="vote-bars">
+          <div class="vote-bar-row">
+            <span class="vote-bar-label">Pour</span>
+            <div class="vote-bar-track">
+              <div class="vote-bar-fill vote-for" style="width:${pctFor}%"></div>
+            </div>
+            <span class="vote-bar-count">${votesFor.length}/${VOTES_NEEDED}</span>
+          </div>
+          <div class="vote-bar-row">
+            <span class="vote-bar-label">Contre</span>
+            <div class="vote-bar-track">
+              <div class="vote-bar-fill vote-against" style="width:${pctAgainst}%"></div>
+            </div>
+            <span class="vote-bar-count">${votesAgainst.length}/${VOTES_NEEDED}</span>
+          </div>
+        </div>
+        ${!isClosed ? `
+          <div class="vote-btns">
+            <button id="vote-for-btn" class="btn vote-btn ${hasVotedFor ? 'vote-btn-active-for' : ''}"
+              ${isClosed ? "disabled" : ""}>
+              👍 Pour ${hasVotedFor ? "(voté)" : ""}
+            </button>
+            <button id="vote-against-btn" class="btn vote-btn ${hasVotedAgainst ? 'vote-btn-active-against' : ''}"
+              ${isClosed ? "disabled" : ""}>
+              👎 Contre ${hasVotedAgainst ? "(voté)" : ""}
+            </button>
+          </div>
+        ` : ""}
+        <div class="vote-voters" style="margin-top:10px;font-size:.75rem;color:var(--text-muted)">
+          ${votesFor.length || votesAgainst.length
+            ? `${votesFor.length} vote(s) pour · ${votesAgainst.length} vote(s) contre`
+            : "Aucun vote pour l'instant."}
+        </div>
+      </div>
+    </div>`;
+}
+
+function setupVoteButtons(e) {
+  const forBtn     = document.getElementById("vote-for-btn");
+  const againstBtn = document.getElementById("vote-against-btn");
+  if (!forBtn) return;
+
+  forBtn.addEventListener("click", () => handleVote(e, "for"));
+  againstBtn.addEventListener("click", () => handleVote(e, "against"));
+}
+
+async function handleVote(e, direction) {
+  const uid  = getCurrentUser()?.uid;
+  const user = getCurrentUserData();
+  if (!uid) return;
+
+  const votesFor     = e.votesFor     || [];
+  const votesAgainst = e.votesAgainst || [];
+
+  const alreadyFor     = votesFor.includes(uid);
+  const alreadyAgainst = votesAgainst.includes(uid);
+
+  if (direction === "for"     && alreadyFor)     { showToast("Tu as déjà voté Pour.", "error"); return; }
+  if (direction === "against" && alreadyAgainst) { showToast("Tu as déjà voté Contre.", "error"); return; }
+  if (alreadyFor || alreadyAgainst) { showToast("Tu as déjà voté sur cette proposition.", "error"); return; }
+
+  const forBtn     = document.getElementById("vote-for-btn");
+  const againstBtn = document.getElementById("vote-against-btn");
+  forBtn.disabled = true; againstBtn.disabled = true;
+
+  try {
+    entry = await voteEntry(e.id, direction, votesFor, votesAgainst);
+    const voteSection = document.getElementById("vote-section");
+    if (voteSection) voteSection.outerHTML = renderVoteSection(entry);
+    setupVoteButtons(entry);
+    showToast("Vote enregistré.", "success");
+  } catch (err) {
+    showToast("Erreur lors du vote.", "error");
+    console.error(err);
+    forBtn.disabled = false; againstBtn.disabled = false;
+  }
+}
+
+// ── History ───────────────────────────────────────────────────
 
 async function loadHistory(entryId) {
   try {
-    const history = await getHistory(entryId);
+    const history   = await getHistory(entryId);
     const container = document.getElementById("history-body");
     if (!container) return;
 
@@ -137,20 +241,8 @@ async function loadHistory(entryId) {
       return;
     }
 
-    const ACTION_LABELS = {
-      create: "Création",
-      update: "Modification"
-    };
-
-    const FIELD_LABELS = {
-      title:       "Titre",
-      category:    "Catégorie",
-      description: "Description",
-      status:      "Statut",
-      faction:     "Faction",
-      replaces:    "Remplace",
-      all:         ""
-    };
+    const ACTION_LABELS = { create: "Création", update: "Modification" };
+    const FIELD_LABELS  = { title: "Titre", category: "Catégorie", description: "Description", status: "Statut", faction: "Faction", factions: "Factions", replaces: "Remplace", all: "" };
 
     container.innerHTML = `
       <div class="history-list">
@@ -166,7 +258,6 @@ async function loadHistory(entryId) {
               </div>
             `;
           }).join("");
-
           return `
             <div class="history-item">
               <div class="history-icon">${h.action === "create" ? "+" : "✎"}</div>
@@ -180,22 +271,22 @@ async function loadHistory(entryId) {
             </div>
           `;
         }).join("")}
-      </div>
-    `;
+      </div>`;
   } catch (err) {
     console.error("History error:", err);
   }
 }
 
+// ── Delete ────────────────────────────────────────────────────
+
 async function handleDelete() {
   if (!entry) return;
   const ok = await confirmModal(
     "Supprimer l'entrée",
-    `Es-tu sûr de vouloir supprimer <strong>${entry.title}</strong> ? Cette action est irréversible.`,
+    `Es-tu sûr de vouloir supprimer <strong>${escapeHtml(entry.title)}</strong> ? Cette action est irréversible.`,
     "Supprimer"
   );
   if (!ok) return;
-
   try {
     await deleteEntry(entry.id);
     showToast("Entrée supprimée.", "success");
@@ -208,8 +299,5 @@ async function handleDelete() {
 
 function escapeHtml(str) {
   if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
