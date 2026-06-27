@@ -104,6 +104,13 @@ export async function deleteEntry(id) {
   await deleteDoc(doc(db, "entries", id));
 }
 
+export async function archiveEntry(id) {
+  await updateDoc(doc(db, "entries", id), {
+    status: "Archivée",
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function togglePin(id, currentlyPinned) {
   await updateDoc(doc(db, "entries", id), {
     pinned: !currentlyPinned,

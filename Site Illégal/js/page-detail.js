@@ -1,5 +1,5 @@
 import { requireAuth, canEdit, isAdmin, getCurrentUser, getCurrentUserData } from "./auth.js";
-import { getEntry, getHistory, deleteEntry, voteEntry, togglePin } from "./entries.js";
+import { getEntry, getHistory, archiveEntry, voteEntry, togglePin } from "./entries.js";
 import {
   renderNavbar, showToast, confirmModal, formatDate,
   statusBadge, catBadge, factionBadges, normalizeFactions, getParam, showSpinner
@@ -335,17 +335,17 @@ async function loadHistory(entryId) {
 async function handleDelete() {
   if (!entry) return;
   const ok = await confirmModal(
-    "Supprimer l'entrée",
-    `Es-tu sûr de vouloir supprimer <strong>${escapeHtml(entry.title)}</strong> ? Cette action est irréversible.`,
-    "Supprimer"
+    "Archiver l'entrée",
+    `Archiver <strong>${escapeHtml(entry.title)}</strong> ? Elle sera masquée par défaut mais restera accessible.`,
+    "Archiver"
   );
   if (!ok) return;
   try {
-    await deleteEntry(entry.id);
-    showToast("Entrée supprimée.", "success");
-    setTimeout(() => window.location.href = "/entries.html", 800);
+    await archiveEntry(entry.id);
+    showToast("Entrée archivée.", "success");
+    setTimeout(() => window.location.href = `/entries.html?section=${entry.section || "decisions"}`, 800);
   } catch (err) {
-    showToast("Erreur lors de la suppression.", "error");
+    showToast("Erreur lors de l'archivage.", "error");
     console.error(err);
   }
 }

@@ -1796,70 +1796,117 @@ mark.hl {
   background: #fff;
   color: #111;
   border-radius: var(--r-md);
-  padding: 38px 42px;
+  overflow: hidden;
   min-height: 580px;
   font-family: 'Times New Roman', Georgia, serif;
   font-size: 13px;
   line-height: 1.75;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0,0,0,.22);
+  border: 1px solid #d4a080;
 }
 
+/* En-tête orange */
 .communique-doc-brand {
-  text-align: center;
-  margin-bottom: 22px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid #111;
+  background: linear-gradient(135deg, #7c1a0a 0%, #c2410c 100%);
+  color: #fff;
+  padding: 18px 26px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 3px solid #9a3412;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
+
+.communique-doc-brand-logo {
+  width: 46px;
+  height: 46px;
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.35);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.communique-doc-brand-text { flex: 1; }
 
 .communique-doc-brand-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: .1em;
+  letter-spacing: .14em;
+  color: #fff;
   text-transform: uppercase;
   margin-bottom: 2px;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .communique-doc-brand-sub {
-  font-size: 10.5px;
-  color: #555;
-  letter-spacing: .06em;
+  font-size: 9.5px;
+  color: rgba(255,255,255,.75);
+  letter-spacing: .08em;
   text-transform: uppercase;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.communique-doc-brand-stamp {
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: rgba(255,255,255,.65);
+  border: 1px solid rgba(255,255,255,.35);
+  padding: 4px 9px;
+  border-radius: 3px;
+  font-family: Arial, Helvetica, sans-serif;
+  flex-shrink: 0;
+}
+
+/* Contenu intérieur */
+.communique-doc-inner {
+  padding: 26px 32px 32px;
 }
 
 .communique-doc-heading {
   text-align: center;
+  padding-bottom: 14px;
   margin-bottom: 18px;
+  border-bottom: 1px solid #e8d5cc;
 }
 
 .communique-doc-type {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: .12em;
+  letter-spacing: .18em;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  color: #c2410c;
+  font-family: Arial, Helvetica, sans-serif;
+  margin-bottom: 4px;
 }
 
 .communique-doc-ref {
-  font-size: 10.5px;
-  color: #666;
-  letter-spacing: .04em;
+  font-size: 10px;
+  color: #888;
+  letter-spacing: .06em;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .communique-doc-meta {
   font-size: 11px;
-  color: #333;
-  border: 1px solid #bbb;
-  border-radius: 2px;
-  padding: 9px 13px;
+  color: #222;
+  border: 1px solid #e0c4b4;
+  border-left: 4px solid #c2410c;
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
   margin-bottom: 18px;
-  background: #f9f9f9;
+  background: #fef7f3;
 }
 
 .communique-doc-meta-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .communique-doc-meta-row:last-child { margin-bottom: 0; }
@@ -1867,12 +1914,14 @@ mark.hl {
 .communique-doc-meta-label {
   font-weight: 700;
   min-width: 105px;
+  color: #9a3412;
 }
 
 .communique-doc-divider {
   border: none;
-  border-top: 1px solid #ccc;
-  margin: 16px 0;
+  height: 2px;
+  background: linear-gradient(90deg, #c2410c 0%, #fed7aa 55%, transparent 100%);
+  margin: 0 0 18px;
 }
 
 .communique-doc-body {
@@ -1880,25 +1929,31 @@ mark.hl {
   white-space: pre-wrap;
   min-height: 140px;
   color: #1a1a1a;
+  line-height: 1.7;
+  text-align: justify;
 }
 
 .communique-doc-signature {
-  margin-top: 38px;
+  margin-top: 40px;
   text-align: right;
   font-size: 11.5px;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid #c2410c;
   padding-top: 12px;
 }
 
 .communique-doc-signature-name {
   font-weight: 700;
-  font-size: 12.5px;
+  font-size: 13px;
   margin-bottom: 2px;
+  color: #111;
 }
 
 .communique-doc-signature-role {
-  font-size: 10.5px;
-  color: #555;
+  font-size: 10px;
+  color: #c2410c;
+  letter-spacing: .04em;
+  font-style: italic;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* ── Admin utilisateurs ─────────────────────────────────────── */
@@ -2024,6 +2079,131 @@ mark.hl {
 .faction-statut-suspens  { color: #eab308; font-weight: 700; }
 .faction-statut-dissoute { color: var(--s-refused); font-weight: 700; }
 
+/* ── Navbar search button ────────────────────────────────────── */
+.nav-search-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 5px 9px;
+  line-height: 1;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.nav-search-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Search overlay ──────────────────────────────────────────── */
+.fw-search-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  background: var(--bg-card);
+  border-bottom: 2px solid var(--accent);
+  box-shadow: 0 6px 28px rgba(0,0,0,.45);
+}
+.fw-search-overlay.open { display: block; }
+
+.fw-search-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.fw-search-icon-label {
+  font-size: 1.1rem;
+  opacity: .55;
+  flex-shrink: 0;
+}
+
+.fw-search-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 9px 14px;
+  color: var(--text-primary);
+  font-size: .95rem;
+  outline: none;
+  transition: border-color .15s;
+}
+.fw-search-input:focus { border-color: var(--accent); }
+
+.fw-search-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.fw-search-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+.fw-search-results {
+  max-width: 780px;
+  margin: 0 auto;
+  max-height: 420px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.fw-search-result {
+  display: block;
+  padding: 12px 20px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background .12s;
+}
+.fw-search-result:hover { background: var(--bg-hover); }
+
+.fw-search-result-title {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.fw-search-result-meta {
+  font-size: .75rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 6px;
+}
+
+.fw-search-result-section {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.fw-search-loading,
+.fw-search-empty {
+  padding: 16px 20px;
+  font-size: .82rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.fw-search-more {
+  padding: 10px 20px;
+  font-size: .75rem;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--border-subtle);
+}
+
 /* ── Print ──────────────────────────────────────────────────── */
 @media print {
   #navbar, .entry-actions, #entry-actions,
@@ -2049,9 +2229,23 @@ mark.hl {
   .page-header              { display: none !important; }
   .communique-doc {
     box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
+    border: 1px solid #d4a080 !important;
   }
+  .communique-doc-brand {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    background: linear-gradient(135deg, #7c1a0a 0%, #c2410c 100%) !important;
+  }
+  .communique-doc-meta {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    background: #fef7f3 !important;
+  }
+  .communique-doc-divider {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  .fw-search-overlay { display: none !important; }
 }
 
 @media (max-width: 900px) {

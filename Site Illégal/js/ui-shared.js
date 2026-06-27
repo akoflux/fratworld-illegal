@@ -6,10 +6,10 @@ const NAV_LINKS = [
   { href: "/index.html",        label: "Accueil",     key: "dashboard"  },
   { href: "/entries.html",      label: "Décisions",   key: "decisions"  },
   { href: "/factions.html",     label: "Factions",    key: "factions"   },
+  { href: "/dossiers.html",     label: "Dossiers",    key: "dossiers"   },
   { href: "/entries.html?section=propositions", label: "Propositions", key: "propositions" },
   { href: "/documents.html",    label: "Documents",   key: "documents"  },
   { href: "/reglement.html",    label: "Règlement",   key: "reglement"  },
-  { href: "/search.html",       label: "Recherche",   key: "search"     },
   { href: "/communique.html",   label: "Communiqué",  key: "communique" },
   { href: "/admin-users.html",  label: "Admin",       key: "admin", adminOnly: true }
 ];
@@ -45,6 +45,7 @@ export function renderNavbar(activePage) {
       <div class="navbar-nav" id="nav-links">${linksHtml}</div>
 
       <div class="navbar-right">
+        <button class="nav-search-btn" id="nav-search-btn" title="Rechercher">🔍</button>
         <div class="user-info">
           <div class="user-avatar">${initials}</div>
           <span style="display:none" class="user-name-text">${name}</span>
@@ -67,6 +68,10 @@ export function renderNavbar(activePage) {
   `;
 
   document.getElementById("logout-btn").addEventListener("click", () => logout());
+  document.getElementById("nav-search-btn").addEventListener("click", openSearch);
+
+  // Créer l'overlay de recherche (une seule fois)
+  if (!document.getElementById("fw-search-overlay")) initSearchOverlay();
 
   const hamburger = document.getElementById("hamburger-btn");
   const panel     = document.getElementById("mobile-panel");
@@ -82,6 +87,117 @@ export function renderNavbar(activePage) {
   overlay.addEventListener("click",   () => toggleMenu(false));
   logoutMob?.addEventListener("click", () => logout());
 }
+
+// ── Search overlay ────────────────────────────────────────────
+
+let _searchCache   = null;
+let _searchCacheTs = 0;
+let _searchTimer   = null;
+const SEARCH_TTL   = 60_000;
+
+function initSearchOverlay() {
+  const overlay = document.createElement("div");
+  overlay.id        = "fw-search-overlay";
+  overlay.className = "fw-search-overlay";
+  overlay.innerHTML = `
+    <div class="fw-search-header">
+      <span class="fw-search-icon-label">🔍</span>
+      <input id="fw-search-input" class="fw-search-input"
+        placeholder="Rechercher une décision, proposition, faction…" autocomplete="off" />
+      <button class="fw-search-close" id="fw-search-close">✕</button>
+    </div>
+    <div id="fw-search-results" class="fw-search-results"></div>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById("fw-search-close")
+    .addEventListener("click", closeSearch);
+
+  overlay.addEventListener("keydown", e => { if (e.key === "Escape") closeSearch(); });
+
+  document.getElementById("fw-search-input")
+    .addEventListener("input", e => {
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(() => runSearch(e.target.value), 250);
+    });
+}
+
+function openSearch() {
+  const overlay = document.getElementById("fw-search-overlay");
+  if (!overlay) return;
+  overlay.classList.add("open");
+  const input = document.getElementById("fw-search-input");
+  input?.focus();
+  if (input && !input.value) {
+    document.getElementById("fw-search-results").innerHTML = "";
+  }
+}
+
+function closeSearch() {
+  document.getElementById("fw-search-overlay")?.classList.remove("open");
+}
+
+async function runSearch(raw) {
+  const q   = raw.trim().toLowerCase();
+  const res = document.getElementById("fw-search-results");
+  if (!res) return;
+
+  if (q.length < 2) { res.innerHTML = ""; return; }
+
+  res.innerHTML = `<div class="fw-search-loading">Recherche…</div>`;
+
+  try {
+    const now = Date.now();
+    if (!_searchCache || now - _searchCacheTs > SEARCH_TTL) {
+      const mod      = await import("./entries.js");
+      _searchCache   = await mod.getEntries();
+      _searchCacheTs = now;
+    }
+
+    const SECTION_LABEL = { decisions: "Décisions", propositions: "Propositions", factions: "Factions" };
+    const matches = _searchCache.filter(e => {
+      const hay = `${e.title} ${e.description} ${e.authorName} ${e.category} ${(e.factions||[]).join(" ")}`.toLowerCase();
+      return hay.includes(q);
+    });
+
+    if (!matches.length) {
+      res.innerHTML = `<div class="fw-search-empty">Aucun résultat pour « ${escapeHtml(raw)} »</div>`;
+      return;
+    }
+
+    const html = matches.slice(0, 12).map(e => {
+      const section = e.section || "decisions";
+      const url     = `/entry-detail.html?id=${e.id}&section=${section}`;
+      const title   = _hlSearch(escapeHtml(e.title), q);
+      return `
+        <a href="${url}" class="fw-search-result" onclick="closeSearch()">
+          <div class="fw-search-result-title">${title}</div>
+          <div class="fw-search-result-meta">
+            <span class="fw-search-result-section">${SECTION_LABEL[section] || section}</span>
+            <span>· ${escapeHtml(e.authorName)}</span>
+            <span>· ${e.status}</span>
+          </div>
+        </a>`;
+    }).join("");
+
+    const more = matches.length > 12
+      ? `<div class="fw-search-more">${matches.length - 12} autres résultats — affinez la recherche</div>`
+      : "";
+
+    res.innerHTML = html + more;
+  } catch (err) {
+    res.innerHTML = `<div class="fw-search-empty" style="color:var(--s-refused)">Erreur lors de la recherche.</div>`;
+    console.error(err);
+  }
+}
+
+function _hlSearch(str, q) {
+  const idx = str.toLowerCase().indexOf(q);
+  if (idx < 0) return str;
+  return str.slice(0, idx) + `<mark class="hl">${str.slice(idx, idx + q.length)}</mark>` + str.slice(idx + q.length);
+}
+
+// Exposer closeSearch pour les liens href dans l'overlay
+window.closeSearch = closeSearch;
 
 // ── Toast notifications ───────────────────────────────────────
 

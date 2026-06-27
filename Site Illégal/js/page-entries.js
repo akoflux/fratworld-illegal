@@ -1,5 +1,5 @@
 import { requireAuth, canEdit } from "./auth.js";
-import { subscribeEntries, deleteEntry, togglePin } from "./entries.js";
+import { subscribeEntries, archiveEntry, togglePin } from "./entries.js";
 import {
   renderNavbar, showToast, confirmModal, formatDate,
   statusClass, statusBadge, catBadge, factionBadges, normalizeFactions, showSpinner
@@ -316,16 +316,16 @@ window.handlePin = async (id, currentlyPinned) => {
 
 window.handleDelete = async (id, title) => {
   const ok = await confirmModal(
-    "Supprimer l'entrée",
-    `Es-tu sûr de vouloir supprimer <strong>${title}</strong> ?`,
-    "Supprimer"
+    "Archiver l'entrée",
+    `Archiver <strong>${title}</strong> ? Elle sera masquée par défaut mais restera accessible via le toggle Archivées.`,
+    "Archiver"
   );
   if (!ok) return;
   try {
-    await deleteEntry(id);
-    showToast("Entrée supprimée.", "success");
+    await archiveEntry(id);
+    showToast("Entrée archivée.", "success");
   } catch (err) {
-    showToast("Erreur lors de la suppression.", "error");
+    showToast("Erreur lors de l'archivage.", "error");
     console.error(err);
   }
 };
