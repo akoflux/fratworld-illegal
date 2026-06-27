@@ -132,16 +132,23 @@ h3 { font-size: 1.05rem; font-weight: 600; }
 }
 
 .navbar-brand .brand-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--accent-dim);
-  border: 1px solid var(--accent);
+  width: 36px;
+  height: 36px;
+  background: #000;
+  border: 1px solid rgba(220, 60, 20, .35);
   border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  overflow: hidden;
   flex-shrink: 0;
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .navbar-brand .brand-text {
@@ -1819,16 +1826,23 @@ mark.hl {
 }
 
 .communique-doc-brand-logo {
-  width: 46px;
-  height: 46px;
-  background: rgba(255,255,255,.18);
-  border: 2px solid rgba(255,255,255,.35);
+  width: 48px;
+  height: 48px;
+  background: #fff;
+  border: 2px solid rgba(255,255,255,.6);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  overflow: hidden;
   flex-shrink: 0;
+}
+
+.communique-doc-brand-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .communique-doc-brand-text { flex: 1; }
@@ -1954,6 +1968,19 @@ mark.hl {
   letter-spacing: .04em;
   font-style: italic;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.communique-doc-footer {
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid #f0e0d8;
+  text-align: center;
+}
+
+.communique-doc-footer-img {
+  height: 20px;
+  opacity: .55;
+  display: inline-block;
 }
 
 /* ── Admin utilisateurs ─────────────────────────────────────── */
@@ -2236,6 +2263,12 @@ mark.hl {
     -webkit-print-color-adjust: exact !important;
     background: linear-gradient(135deg, #7c1a0a 0%, #c2410c 100%) !important;
   }
+  .communique-doc-brand-img,
+  .communique-doc-footer-img {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  .communique-doc-footer-img { opacity: .7 !important; }
   .communique-doc-meta {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;

@@ -35,7 +35,9 @@ export function renderNavbar(activePage) {
   document.getElementById("navbar").innerHTML = `
     <nav class="navbar">
       <a href="/index.html" class="navbar-brand">
-        <div class="brand-icon">⚔</div>
+        <div class="brand-icon">
+          <img src="/image/frat_logo_illegal.png" alt="FW" class="brand-logo-img" />
+        </div>
         <div class="brand-text">
           <span class="brand-name">FratWorld RP</span>
           <span class="brand-sub">Staff Illégal</span>
