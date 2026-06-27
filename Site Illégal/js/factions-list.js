@@ -1,8 +1,8 @@
 import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import {
-  collection, doc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, serverTimestamp, getDocs
+  collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
+  onSnapshot, query, orderBy, serverTimestamp, getDocs, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -16,10 +16,12 @@ export async function createFaction(data) {
   return addDoc(collection(db, "factions"), {
     nom:      data.nom.trim(),
     type:     data.type,
+    statut:   data.statut || "Actif",
     lead:     data.lead.trim(),
     coLead:   data.coLead.trim(),
     business: data.business.trim(),
     actif:    true,
+    leadHistory: [],
     authorUid:  uid,
     authorName: name,
     createdAt:  serverTimestamp(),
@@ -30,22 +32,44 @@ export async function createFaction(data) {
 
 export async function updateFaction(id, data) {
   const { name } = authorInfo();
-  await updateDoc(doc(db, "factions", id), {
+
+  // Récupère l'ancienne version pour détecter les changements de lead
+  const oldSnap = await getDoc(doc(db, "factions", id));
+  const old     = oldSnap.exists() ? oldSnap.data() : {};
+
+  const update = {
     nom:      data.nom.trim(),
     type:     data.type,
+    statut:   data.statut || "Actif",
     lead:     data.lead.trim(),
     coLead:   data.coLead.trim(),
     business: data.business.trim(),
     updatedAt: serverTimestamp(),
     updatedBy: name
-  });
+  };
+
+  const leadChanged   = data.lead.trim()   !== (old.lead   || "");
+  const coLeadChanged = data.coLead.trim() !== (old.coLead || "");
+
+  if (leadChanged || coLeadChanged) {
+    const historyEntry = {
+      date:    new Date().toISOString(),
+      by:      name,
+      changes: []
+    };
+    if (leadChanged)   historyEntry.changes.push({ champ: "Lead",    avant: old.lead   || "—", apres: data.lead.trim()   });
+    if (coLeadChanged) historyEntry.changes.push({ champ: "Co-Lead", avant: old.coLead || "—", apres: data.coLead.trim() });
+    update.leadHistory = arrayUnion(historyEntry);
+  }
+
+  await updateDoc(doc(db, "factions", id), update);
 }
 
 export async function deleteFaction(id) {
   await deleteDoc(doc(db, "factions", id));
 }
 
-// onSnapshot avec gestion d'erreur : si Firestore refuse, callback([]) est appelé
+// onSnapshot avec gestion d'erreur
 export function subscribeFactions(callback) {
   const q = query(collection(db, "factions"), orderBy("nom", "asc"));
   return onSnapshot(

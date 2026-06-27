@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Communiqué — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+  <div id="navbar"></div>
+  <main class="page-content">
+
+    <div class="page-header print-hidden">
+      <div class="page-header-left">
+        <h1>Communiqué officiel</h1>
+        <p class="page-subtitle">Crée un document professionnel à partager aux joueurs</p>
+      </div>
+      <button onclick="window.print()" class="btn btn-primary">🖨 Exporter PDF</button>
+    </div>
+
+    <div class="communique-layout">
+
+      <!-- Formulaire (gauche) -->
+      <div class="form-card print-hidden">
+        <div class="form-section-title" style="margin-bottom:16px">Rédaction</div>
+
+        <div class="form-group">
+          <label>Type de communiqué <span class="required">*</span></label>
+          <select id="c-type" class="form-control">
+            <option value="COMMUNIQUÉ OFFICIEL">Communiqué officiel</option>
+            <option value="RÈGLE OFFICIELLE">Règle officielle</option>
+            <option value="AVERTISSEMENT OFFICIEL">Avertissement officiel</option>
+            <option value="INFORMATION SERVEUR">Information serveur</option>
+            <option value="DÉCISION DU STAFF">Décision du staff</option>
+            <option value="MISE À JOUR RÈGLEMENT">Mise à jour règlement</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Titre / Objet <span class="required">*</span></label>
+            <input id="c-titre" type="text" class="form-control" placeholder="Ex : Interdiction des règlements de compte en zone publique" />
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input id="c-date" type="date" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Destinataires</label>
+          <input id="c-destinataires" type="text" class="form-control" placeholder="Toutes les factions, Gang uniquement, Mafia & Cartel…" />
+        </div>
+
+        <div class="form-group">
+          <label>Référence (optionnel)</label>
+          <input id="c-ref" type="text" class="form-control" placeholder="Ex : STAFF-2026-042" />
+        </div>
+
+        <div class="form-group">
+          <label>Contenu <span class="required">*</span></label>
+          <textarea id="c-corps" class="form-control" style="min-height:260px"
+            placeholder="Rédigez ici le corps du communiqué. Soyez précis, officiel et complet."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Signataire</label>
+          <input id="c-signataire" type="text" class="form-control" placeholder="Votre nom (rempli automatiquement)" />
+        </div>
+
+        <div class="form-group">
+          <label>Titre du signataire</label>
+          <input id="c-titre-signataire" type="text" class="form-control" value="Référent Illégal — FratWorld RP" />
+        </div>
+
+        <div class="form-actions">
+          <button type="button" onclick="resetForm()" class="btn btn-secondary">Réinitialiser</button>
+          <button type="button" onclick="window.print()" class="btn btn-primary">🖨 Exporter PDF</button>
+        </div>
+      </div>
+
+      <!-- Aperçu (droite) -->
+      <div class="communique-preview-wrap">
+        <div class="communique-preview-label">Aperçu du document</div>
+        <div class="communique-doc" id="communique-doc">
+          <div class="communique-doc-brand">
+            <div class="communique-doc-brand-title">FratWorld RP</div>
+            <div class="communique-doc-brand-sub">Staff Illégal — Direction</div>
+          </div>
+
+          <div class="communique-doc-heading">
+            <div class="communique-doc-type" id="doc-type">COMMUNIQUÉ OFFICIEL</div>
+            <div class="communique-doc-ref" id="doc-ref" style="display:none"></div>
+          </div>
+
+          <div class="communique-doc-meta">
+            <div class="communique-doc-meta-row">
+              <span class="communique-doc-meta-label">Objet :</span>
+              <span id="doc-titre">—</span>
+            </div>
+            <div class="communique-doc-meta-row">
+              <span class="communique-doc-meta-label">Date :</span>
+              <span id="doc-date">—</span>
+            </div>
+            <div class="communique-doc-meta-row">
+              <span class="communique-doc-meta-label">Destinataires :</span>
+              <span id="doc-destinataires">Toutes les factions</span>
+            </div>
+          </div>
+
+          <hr class="communique-doc-divider" />
+
+          <div class="communique-doc-body" id="doc-corps">Le contenu du communiqué apparaîtra ici au fur et à mesure de votre rédaction.</div>
+
+          <div class="communique-doc-signature">
+            <div class="communique-doc-signature-name" id="doc-signataire">—</div>
+            <div class="communique-doc-signature-role" id="doc-titre-signataire">Référent Illégal — FratWorld RP</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script type="module" src="/js/page-communique.js"></script>
+</body>
+</html>

@@ -47,6 +47,8 @@
                 <option value="Validé">✅ Validé</option>
                 <option value="Refusé">❌ Refusé</option>
                 <option value="En débat">🟡 En débat</option>
+                <option value="En attente">🔵 En attente</option>
+                <option value="Archivée">🗄 Archivée</option>
               </select>
             </div>
           </div>
@@ -57,6 +59,13 @@
               <!-- Généré par JS -->
             </div>
             <span class="form-hint">Sélectionne une ou plusieurs factions. Laisse vide si non applicable.</span>
+          </div>
+
+          <!-- Deadline vote — visible uniquement pour propositions, géré par JS -->
+          <div class="form-group" id="deadline-group" style="display:none">
+            <label for="vote-deadline">Date limite de vote</label>
+            <input type="datetime-local" id="vote-deadline" class="form-control" />
+            <span class="form-hint">Optionnel. Le vote sera clôturé automatiquement après cette date.</span>
           </div>
         </div>
 

@@ -1587,3 +1587,475 @@ mark.hl {
 }
 .vote-closed-ok      { background: rgba(34,197,94,.15);  color: #22c55e; border: 1px solid #22c55e40; }
 .vote-closed-refuse  { background: rgba(239,68,68,.15);  color: #ef4444; border: 1px solid #ef444440; }
+
+/* ── Nouveaux statuts ──────────────────────────────────────── */
+:root {
+  --s-pending:         #3b82f6;
+  --s-pending-bg:      rgba(59,130,246,.10);
+  --s-pending-border:  rgba(59,130,246,.25);
+  --s-archived:        #4b5563;
+  --s-archived-bg:     rgba(75,85,99,.10);
+  --s-archived-border: rgba(75,85,99,.25);
+}
+
+.badge-pending  { background: var(--s-pending-bg);  color: var(--s-pending);  border-color: var(--s-pending-border); }
+.badge-archived { background: var(--s-archived-bg); color: var(--s-archived); border-color: var(--s-archived-border); }
+
+.card-status-bar.pending  { background: var(--s-pending); }
+.card-status-bar.archived { background: var(--s-archived); }
+
+.activity-dot.pending  { background: var(--s-pending); }
+.activity-dot.archived { background: var(--s-archived); }
+
+/* ── Kanban ─────────────────────────────────────────────────── */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.kanban-col {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.kanban-col.col-pending  { border-top: 3px solid var(--s-debate); }
+.kanban-col.col-valid    { border-top: 3px solid var(--s-valid); }
+.kanban-col.col-refused  { border-top: 3px solid var(--s-refused); }
+
+.kanban-col-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kanban-col-title {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+
+.kanban-col-title.pending  { color: var(--s-debate); }
+.kanban-col-title.valid    { color: var(--s-valid); }
+.kanban-col-title.refused  { color: var(--s-refused); }
+
+.kanban-col-count {
+  font-size: .68rem;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-weight: 700;
+}
+
+.kanban-col-count.pending  { background: var(--s-debate-bg);  color: var(--s-debate); }
+.kanban-col-count.valid    { background: var(--s-valid-bg);   color: var(--s-valid); }
+.kanban-col-count.refused  { background: var(--s-refused-bg); color: var(--s-refused); }
+
+.kanban-cards { padding: 8px; display: flex; flex-direction: column; gap: 7px; }
+
+.kanban-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 11px 12px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.kanban-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+
+.kanban-card-title {
+  font-size: .83rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+  line-height: 1.35;
+}
+
+.kanban-card-meta {
+  font-size: .7rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.kanban-vote-row {
+  margin-top: 7px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: .68rem;
+  color: var(--text-muted);
+}
+
+/* ── Pin ────────────────────────────────────────────────────── */
+.pin-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-muted);
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  transition: color .15s, background .15s;
+  line-height: 1;
+}
+
+.pin-btn:hover { color: var(--accent); background: var(--accent-dim); }
+.pin-btn.pinned { color: var(--accent); }
+
+.pinned-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .65rem;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(249,115,22,.3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* ── Abstention ─────────────────────────────────────────────── */
+.vote-abstain             { background: #6b7280; }
+.vote-btn-active-abstain  { background: rgba(107,114,128,.15); color: #9ca3af; border-color: #6b7280; }
+
+/* ── Deadline vote ──────────────────────────────────────────── */
+.vote-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--r-md);
+  font-size: .78rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  margin-bottom: 10px;
+}
+
+.vote-deadline.expired {
+  color: var(--s-refused);
+  border-color: rgba(239,68,68,.3);
+  background: rgba(239,68,68,.07);
+}
+
+/* ── Toggle archives ────────────────────────────────────────── */
+.archived-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: transparent;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.archived-toggle:hover { background: var(--bg-card); color: var(--text-secondary); }
+.archived-toggle.active { background: var(--bg-card); color: var(--accent); border-color: var(--accent); }
+
+/* ── Communiqué ─────────────────────────────────────────────── */
+.communique-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.communique-preview-wrap {
+  position: sticky;
+  top: calc(var(--nav-h) + 20px);
+}
+
+.communique-preview-label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.communique-doc {
+  background: #fff;
+  color: #111;
+  border-radius: var(--r-md);
+  padding: 38px 42px;
+  min-height: 580px;
+  font-family: 'Times New Roman', Georgia, serif;
+  font-size: 13px;
+  line-height: 1.75;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+}
+
+.communique-doc-brand {
+  text-align: center;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #111;
+}
+
+.communique-doc-brand-title {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.communique-doc-brand-sub {
+  font-size: 10.5px;
+  color: #555;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.communique-doc-heading {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.communique-doc-type {
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.communique-doc-ref {
+  font-size: 10.5px;
+  color: #666;
+  letter-spacing: .04em;
+}
+
+.communique-doc-meta {
+  font-size: 11px;
+  color: #333;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  padding: 9px 13px;
+  margin-bottom: 18px;
+  background: #f9f9f9;
+}
+
+.communique-doc-meta-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.communique-doc-meta-row:last-child { margin-bottom: 0; }
+
+.communique-doc-meta-label {
+  font-weight: 700;
+  min-width: 105px;
+}
+
+.communique-doc-divider {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 16px 0;
+}
+
+.communique-doc-body {
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  min-height: 140px;
+  color: #1a1a1a;
+}
+
+.communique-doc-signature {
+  margin-top: 38px;
+  text-align: right;
+  font-size: 11.5px;
+  border-top: 1px solid #ccc;
+  padding-top: 12px;
+}
+
+.communique-doc-signature-name {
+  font-weight: 700;
+  font-size: 12.5px;
+  margin-bottom: 2px;
+}
+
+.communique-doc-signature-role {
+  font-size: 10.5px;
+  color: #555;
+}
+
+/* ── Admin utilisateurs ─────────────────────────────────────── */
+.user-list { display: flex; flex-direction: column; gap: 8px; }
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  transition: border-color .15s;
+}
+
+.user-row:hover { border-color: var(--border-focus); }
+
+.user-row-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.user-row-info { flex: 1; min-width: 0; }
+
+.user-row-name {
+  font-weight: 700;
+  font-size: .88rem;
+  color: var(--text-primary);
+}
+
+.user-row-email {
+  font-size: .73rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.user-role-select {
+  padding: 5px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-secondary);
+  font-size: .82rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+}
+
+/* ── Recherche globale ──────────────────────────────────────── */
+.search-results-section { margin-bottom: 24px; }
+
+.search-results-section-title {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.search-result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 7px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.search-result-item:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+
+.search-result-content { flex: 1; min-width: 0; }
+
+.search-result-title {
+  font-weight: 600;
+  font-size: .88rem;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.search-result-desc {
+  font-size: .77rem;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.search-result-meta {
+  font-size: .7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* ── Faction statut ─────────────────────────────────────────── */
+.faction-statut-actif    { color: #22c55e; font-weight: 700; }
+.faction-statut-suspens  { color: #eab308; font-weight: 700; }
+.faction-statut-dissoute { color: var(--s-refused); font-weight: 700; }
+
+/* ── Print ──────────────────────────────────────────────────── */
+@media print {
+  #navbar, .entry-actions, #entry-actions,
+  .vote-btns, .card-actions, .breadcrumb,
+  #history-card, .print-hidden { display: none !important; }
+
+  body            { background: #fff !important; color: #000 !important; }
+  .app-wrapper    { display: block !important; }
+  .page-content   { max-width: 100%; padding: 0 !important; margin: 0 !important; }
+  .detail-card    { border: 1px solid #bbb !important; box-shadow: none !important;
+                    background: #fff !important; color: #000 !important; break-inside: avoid; margin-bottom: 10px !important; }
+  .detail-title, .info-value, .detail-description { color: #000 !important; }
+  .info-label     { color: #555 !important; }
+  .badge          { border: 1px solid #bbb !important; color: #333 !important; background: #eee !important; }
+  .vote-card      { border-left: 2px solid #000 !important; }
+  .vote-bar-track { background: #ddd !important; }
+  .vote-bar-fill  { background: #555 !important; }
+
+  /* Communiqué : n'imprimer que le doc */
+  .communique-layout        { display: block !important; }
+  .communique-preview-wrap  { position: static !important; }
+  .form-card.print-hidden,
+  .page-header              { display: none !important; }
+  .communique-doc {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .kanban-board { grid-template-columns: 1fr; }
+  .communique-layout { grid-template-columns: 1fr; }
+  .communique-preview-wrap { position: static; }
+}

@@ -13,7 +13,6 @@
 
   <main class="page-content">
 
-    <!-- Page header -->
     <div class="page-header">
       <div class="page-header-left">
         <h1>Tableau de bord</h1>
@@ -59,12 +58,23 @@
         </div>
       </div>
 
-      <!-- Répartition factions -->
+      <!-- Répartition sections -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">Répartition par faction</span>
+          <span class="panel-title">Répartition par section</span>
         </div>
         <div class="panel-body" id="breakdown-fac">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Épinglées (full-width) -->
+      <div class="panel" style="grid-column: 1 / -1" id="pinned-panel">
+        <div class="panel-header">
+          <span class="panel-title">📌 Entrées épinglées</span>
+          <a href="/entries.html" style="font-size:.8rem;color:var(--accent)">Voir tout →</a>
+        </div>
+        <div class="panel-body" id="pinned-list">
           <div class="spinner-wrap"><div class="spinner"></div></div>
         </div>
       </div>

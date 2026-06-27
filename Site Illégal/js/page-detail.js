@@ -1,5 +1,5 @@
-import { requireAuth, canEdit, getCurrentUser, getCurrentUserData } from "./auth.js";
-import { getEntry, getHistory, deleteEntry, voteEntry } from "./entries.js";
+import { requireAuth, canEdit, isAdmin, getCurrentUser, getCurrentUserData } from "./auth.js";
+import { getEntry, getHistory, deleteEntry, voteEntry, togglePin } from "./entries.js";
 import {
   renderNavbar, showToast, confirmModal, formatDate,
   statusBadge, catBadge, factionBadges, normalizeFactions, getParam, showSpinner
@@ -19,7 +19,6 @@ requireAuth(async () => {
   try {
     entry = await getEntry(id);
     if (!entry) { window.location.href = "/entries.html"; return; }
-    // Re-render navbar with actual section from the entry data
     if (entry.section && entry.section !== section) renderNavbar(entry.section);
     renderEntry(entry);
     loadHistory(id);
@@ -31,15 +30,17 @@ requireAuth(async () => {
 
 function renderEntry(e) {
   document.title = `${e.title} — FratWorld Staff`;
-
   document.getElementById("breadcrumb-title").textContent = e.title;
 
   const actionsEl = document.getElementById("entry-actions");
   if (canEdit(e)) {
+    const pinLabel = e.pinned ? "Désépingler" : "Épingler";
     actionsEl.innerHTML = `
+      <button class="pin-btn ${e.pinned ? "pinned" : ""}" id="pin-btn" title="${pinLabel}">📌 ${pinLabel}</button>
       <a href="/entry-form.html?id=${e.id}&section=${e.section||'decisions'}" class="btn btn-secondary">✎ Modifier</a>
       <button class="btn btn-danger" id="delete-btn">✕ Supprimer</button>
     `;
+    document.getElementById("pin-btn").addEventListener("click", handlePin);
     document.getElementById("delete-btn").addEventListener("click", handleDelete);
   }
 
@@ -56,7 +57,12 @@ function renderEntry(e) {
           ${statusBadge(e.status, replaced)}
           ${catBadge(e.category)}
           ${facHtml}
+          ${e.pinned ? `<span class="pinned-badge">📌 Épinglé</span>` : ""}
         </div>
+      </div>
+      <div class="detail-actions print-hidden">
+        <button class="btn btn-secondary" onclick="window.print()" title="Exporter en PDF">🖨 Exporter PDF</button>
+        ${isAdmin() ? `<a href="/communique.html?from=${e.id}" class="btn btn-secondary" title="Créer un communiqué">📄 Communiqué</a>` : ""}
       </div>
     </div>
 
@@ -118,7 +124,7 @@ function renderEntry(e) {
 
     ${isPropo ? renderVoteSection(e) : ""}
 
-    <div class="detail-card" id="history-card">
+    <div class="detail-card print-hidden" id="history-card">
       <div class="card-header-bar"><h3>Historique des modifications</h3></div>
       <div id="history-body">
         <div class="spinner-wrap"><div class="spinner"></div></div>
@@ -134,15 +140,34 @@ function renderEntry(e) {
 function renderVoteSection(e) {
   const votesFor     = e.votesFor     || [];
   const votesAgainst = e.votesAgainst || [];
+  const votesAbstain = e.votesAbstain || [];
   const VOTES_NEEDED = 3;
 
   const uid = getCurrentUser()?.uid;
   const hasVotedFor     = votesFor.includes(uid);
   const hasVotedAgainst = votesAgainst.includes(uid);
+  const hasAbstained    = votesAbstain.includes(uid);
   const isClosed = e.status === "Validé" || e.status === "Refusé";
+
+  // Vérification deadline
+  let deadlineHtml = "";
+  let deadlineExpired = false;
+  if (e.voteDeadline) {
+    const dl = new Date(e.voteDeadline);
+    deadlineExpired = dl < new Date();
+    const dlStr = dl.toLocaleDateString("fr-FR", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    }).replace(",", " à");
+    deadlineHtml = `<div class="vote-deadline ${deadlineExpired ? "expired" : ""}">
+      ⏰ ${deadlineExpired ? "Vote clôturé le" : "Deadline :"} ${dlStr}
+    </div>`;
+  }
 
   const pctFor     = Math.min(100, Math.round((votesFor.length     / VOTES_NEEDED) * 100));
   const pctAgainst = Math.min(100, Math.round((votesAgainst.length / VOTES_NEEDED) * 100));
+  const pctAbstain = votesAbstain.length;
+  const canVote    = !isClosed && !deadlineExpired;
 
   return `
     <div class="detail-card vote-card" id="vote-section">
@@ -152,6 +177,7 @@ function renderVoteSection(e) {
       </div>
       <div class="card-content" style="padding:18px">
         ${isClosed ? `<div class="vote-closed-badge ${e.status === 'Validé' ? 'vote-closed-ok' : 'vote-closed-refuse'}">${e.status === 'Validé' ? '✅ Validé' : '❌ Refusé'}</div>` : ""}
+        ${deadlineHtml}
         <div class="vote-bars">
           <div class="vote-bar-row">
             <span class="vote-bar-label">Pour</span>
@@ -168,21 +194,25 @@ function renderVoteSection(e) {
             <span class="vote-bar-count">${votesAgainst.length}/${VOTES_NEEDED}</span>
           </div>
         </div>
-        ${!isClosed ? `
+        ${canVote ? `
           <div class="vote-btns">
             <button id="vote-for-btn" class="btn vote-btn ${hasVotedFor ? 'vote-btn-active-for' : ''}"
               ${hasVotedFor ? "disabled" : ""}>
-              👍 Pour ${hasVotedFor ? "✓" : hasVotedAgainst ? "(changer)" : ""}
+              👍 Pour ${hasVotedFor ? "✓" : hasVotedAgainst || hasAbstained ? "(changer)" : ""}
             </button>
             <button id="vote-against-btn" class="btn vote-btn ${hasVotedAgainst ? 'vote-btn-active-against' : ''}"
               ${hasVotedAgainst ? "disabled" : ""}>
-              👎 Contre ${hasVotedAgainst ? "✓" : hasVotedFor ? "(changer)" : ""}
+              👎 Contre ${hasVotedAgainst ? "✓" : hasVotedFor || hasAbstained ? "(changer)" : ""}
+            </button>
+            <button id="vote-abstain-btn" class="btn vote-btn ${hasAbstained ? 'vote-btn-active-abstain' : ''}"
+              ${hasAbstained ? "disabled" : ""}>
+              ➖ Abstention ${hasAbstained ? "✓" : hasVotedFor || hasVotedAgainst ? "(changer)" : ""}
             </button>
           </div>
         ` : ""}
         <div class="vote-voters" style="margin-top:10px;font-size:.75rem;color:var(--text-muted)">
-          ${votesFor.length || votesAgainst.length
-            ? `${votesFor.length} vote(s) pour · ${votesAgainst.length} vote(s) contre`
+          ${votesFor.length || votesAgainst.length || votesAbstain.length
+            ? `${votesFor.length} pour · ${votesAgainst.length} contre · ${votesAbstain.length} abstention(s)`
             : "Aucun vote pour l'instant."}
         </div>
       </div>
@@ -190,43 +220,58 @@ function renderVoteSection(e) {
 }
 
 function setupVoteButtons(e) {
-  const forBtn     = document.getElementById("vote-for-btn");
-  const againstBtn = document.getElementById("vote-against-btn");
-  if (!forBtn) return;
-
-  forBtn.addEventListener("click", () => handleVote(e, "for"));
-  againstBtn.addEventListener("click", () => handleVote(e, "against"));
+  document.getElementById("vote-for-btn")?.addEventListener("click",     () => handleVote(e, "for"));
+  document.getElementById("vote-against-btn")?.addEventListener("click", () => handleVote(e, "against"));
+  document.getElementById("vote-abstain-btn")?.addEventListener("click", () => handleVote(e, "abstain"));
 }
 
 async function handleVote(e, direction) {
-  const uid  = getCurrentUser()?.uid;
-  const user = getCurrentUserData();
+  const uid = getCurrentUser()?.uid;
   if (!uid) return;
 
   const votesFor     = e.votesFor     || [];
   const votesAgainst = e.votesAgainst || [];
+  const votesAbstain = e.votesAbstain || [];
 
-  const alreadyFor     = votesFor.includes(uid);
-  const alreadyAgainst = votesAgainst.includes(uid);
-
-  if (direction === "for"     && alreadyFor)     { showToast("Tu as déjà voté Pour.", "error"); return; }
-  if (direction === "against" && alreadyAgainst) { showToast("Tu as déjà voté Contre.", "error"); return; }
-  // Changer de camp (Pour → Contre ou Contre → Pour) est autorisé
+  if (direction === "for"     && votesFor.includes(uid))     { showToast("Tu as déjà voté Pour.",        "error"); return; }
+  if (direction === "against" && votesAgainst.includes(uid)) { showToast("Tu as déjà voté Contre.",      "error"); return; }
+  if (direction === "abstain" && votesAbstain.includes(uid)) { showToast("Tu as déjà voté Abstention.", "error"); return; }
 
   const forBtn     = document.getElementById("vote-for-btn");
   const againstBtn = document.getElementById("vote-against-btn");
-  forBtn.disabled = true; againstBtn.disabled = true;
+  const abstainBtn = document.getElementById("vote-abstain-btn");
+  [forBtn, againstBtn, abstainBtn].forEach(b => b && (b.disabled = true));
 
   try {
-    entry = await voteEntry(e.id, direction, votesFor, votesAgainst);
+    entry = await voteEntry(e.id, direction, votesFor, votesAgainst, votesAbstain);
     const voteSection = document.getElementById("vote-section");
     if (voteSection) voteSection.outerHTML = renderVoteSection(entry);
     setupVoteButtons(entry);
     showToast("Vote enregistré.", "success");
   } catch (err) {
-    showToast("Erreur lors du vote.", "error");
+    showToast(err.message || "Erreur lors du vote.", "error");
     console.error(err);
-    forBtn.disabled = false; againstBtn.disabled = false;
+    [forBtn, againstBtn, abstainBtn].forEach(b => b && (b.disabled = false));
+  }
+}
+
+// ── Pin ───────────────────────────────────────────────────────
+
+async function handlePin() {
+  if (!entry) return;
+  try {
+    await togglePin(entry.id, !!entry.pinned);
+    entry.pinned = !entry.pinned;
+    const btn = document.getElementById("pin-btn");
+    if (btn) {
+      const label = entry.pinned ? "Désépingler" : "Épingler";
+      btn.textContent = `📌 ${label}`;
+      btn.title = label;
+      btn.classList.toggle("pinned", entry.pinned);
+    }
+    showToast(entry.pinned ? "Entrée épinglée." : "Entrée désépinglée.", "success");
+  } catch (err) {
+    showToast("Erreur.", "error"); console.error(err);
   }
 }
 
@@ -244,7 +289,13 @@ async function loadHistory(entryId) {
     }
 
     const ACTION_LABELS = { create: "Création", update: "Modification" };
-    const FIELD_LABELS  = { title: "Titre", category: "Catégorie", description: "Description", status: "Statut", faction: "Faction", factions: "Factions", replaces: "Remplace", all: "" };
+    const FIELD_LABELS  = {
+      title: "Titre", category: "Catégorie", description: "Description",
+      status: "Statut", faction: "Faction", factions: "Factions",
+      replaces: "Remplace", all: "", votesFor: "Vote Pour",
+      votesAgainst: "Vote Contre", votesAbstain: "Abstention",
+      voteDeadline: "Deadline vote"
+    };
 
     container.innerHTML = `
       <div class="history-list">

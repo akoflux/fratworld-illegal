@@ -28,7 +28,6 @@ requireAuth(async () => {
   try {
     const fromFirestore = await getFactionNames();
     if (fromFirestore.length) {
-      // Garde "Toutes" toujours disponible en dernière option
       factionNames = fromFirestore.includes("Toutes") ? fromFirestore : [...fromFirestore, "Toutes"];
     }
   } catch(_) { factionNames = FACTIONS_FALLBACK; }
@@ -49,7 +48,6 @@ requireAuth(async () => {
   }
 
   const section = editMode ? (originalEntry.section || SECTION_PARAM) : SECTION_PARAM;
-  // Re-render navbar with correct section (important en mode édition)
   renderNavbar(section);
   buildCategorySelect(section);
   buildFactionCheckboxes(
@@ -57,6 +55,7 @@ requireAuth(async () => {
     factionNames
   );
   buildReplacesSelect(editMode ? entryId : null);
+  toggleDeadlineField(section);
 
   if (editMode) prefillForm(originalEntry);
 
@@ -65,6 +64,11 @@ requireAuth(async () => {
     window.location.href = editMode ? `/entry-detail.html?id=${entryId}` : "/entries.html";
   });
 });
+
+function toggleDeadlineField(section) {
+  const group = document.getElementById("deadline-group");
+  if (group) group.style.display = section === "propositions" ? "" : "none";
+}
 
 function buildCategorySelect(section) {
   const select = document.getElementById("category");
@@ -98,6 +102,12 @@ function prefillForm(e) {
   document.getElementById("title").value       = e.title       || "";
   document.getElementById("status").value      = e.status      || "";
   document.getElementById("description").value = e.description || "";
+
+  if (e.voteDeadline) {
+    const dlField = document.getElementById("vote-deadline");
+    if (dlField) dlField.value = e.voteDeadline;
+  }
+
   if (e.category) {
     const opt = document.querySelector(`#category option[value="${e.category}"]`);
     if (opt) opt.selected = true;
@@ -119,6 +129,9 @@ async function handleSubmit(ev) {
   const description = document.getElementById("description").value.trim();
   const replacesId  = document.getElementById("replaces").value;
   const factions    = [...document.querySelectorAll('input[name="factions"]:checked')].map(cb => cb.value);
+  const voteDeadline = section === "propositions"
+    ? (document.getElementById("vote-deadline")?.value || null)
+    : null;
 
   if (!title)    { showToast("Le titre est requis.", "error"); return; }
   if (!category) { showToast("La catégorie est requise.", "error"); return; }
@@ -131,7 +144,7 @@ async function handleSubmit(ev) {
   btn.disabled = true;
   btn.textContent = "Enregistrement…";
 
-  const data = { title, section, category, status, description, factions, replaces: replacesId, replacesTitle };
+  const data = { title, section, category, status, description, factions, replaces: replacesId, replacesTitle, voteDeadline };
 
   try {
     if (editMode) {

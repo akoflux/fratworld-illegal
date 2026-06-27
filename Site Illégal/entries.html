@@ -57,6 +57,8 @@
           <option value="Validé">Validé</option>
           <option value="Refusé">Refusé</option>
           <option value="En débat">En débat</option>
+          <option value="En attente">En attente</option>
+          <option value="Archivée">Archivée</option>
         </select>
         <select id="filter-factions" class="filter-select">
           <option value="">Toutes factions</option>
@@ -67,11 +69,15 @@
           <option value="Indépendant">Indépendant</option>
           <option value="Toutes">Toutes</option>
         </select>
+        <button id="archived-toggle" class="archived-toggle" title="Afficher / masquer les entrées archivées">
+          🗄 Archivées
+        </button>
       </div>
       <div class="toolbar-right">
         <div class="view-toggle">
           <button class="view-toggle-btn" id="btn-view-cards" title="Vue cards">⊞</button>
           <button class="view-toggle-btn" id="btn-view-table" title="Vue tableau">☰</button>
+          <button class="view-toggle-btn" id="btn-view-kanban" title="Vue kanban">⊟</button>
         </div>
       </div>
     </div>

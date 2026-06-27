@@ -42,11 +42,10 @@ service cloud.firestore {
       }
     }
 
-    // ── dossiers (création faction) ────────────────────────────
+    // ── dossiers ───────────────────────────────────────────────
     match /dossiers/{dossierId} {
       allow read:   if isAuthenticated();
       allow create: if isReferentOrAdmin();
-      // Tout référent peut voter ou modifier un dossier (vote, archivage)
       allow update: if isReferentOrAdmin();
       allow delete: if isAdmin();
     }
@@ -68,6 +67,16 @@ service cloud.firestore {
       allow read:   if isAuthenticated();
       allow create: if isReferentOrAdmin();
       allow update: if isReferentOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── communiqués ────────────────────────────────────────────
+    match /communiques/{commId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
       allow delete: if isAdmin();
     }
   }

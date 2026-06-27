@@ -1,28 +1,33 @@
-import { logout, getCurrentUserData } from "./auth.js";
+import { logout, getCurrentUserData, isAdmin } from "./auth.js";
 
 // ── Navbar ────────────────────────────────────────────────────
 
 const NAV_LINKS = [
-  { href: "/index.html",       label: "Accueil",       key: "dashboard"    },
-  { href: "/entries.html",     label: "Décisions",     key: "decisions"    },
-  { href: "/factions.html",    label: "Factions",      key: "factions"     },
-  { href: "/propositions.html",label: "Propositions",  key: "propositions" },
-  { href: "/dossiers.html",    label: "Dossiers",      key: "dossiers"     },
-  { href: "/documents.html",   label: "Documents",     key: "documents"    },
-  { href: "/reglement.html",   label: "Règlement",     key: "reglement"    }
+  { href: "/index.html",        label: "Accueil",     key: "dashboard"  },
+  { href: "/entries.html",      label: "Décisions",   key: "decisions"  },
+  { href: "/factions.html",     label: "Factions",    key: "factions"   },
+  { href: "/entries.html?section=propositions", label: "Propositions", key: "propositions" },
+  { href: "/documents.html",    label: "Documents",   key: "documents"  },
+  { href: "/reglement.html",    label: "Règlement",   key: "reglement"  },
+  { href: "/search.html",       label: "Recherche",   key: "search"     },
+  { href: "/communique.html",   label: "Communiqué",  key: "communique" },
+  { href: "/admin-users.html",  label: "Admin",       key: "admin", adminOnly: true }
 ];
 
 export function renderNavbar(activePage) {
-  const userData = getCurrentUserData();
-  const name     = userData?.displayName || "Référent";
-  const role     = userData?.role || "referent";
-  const initials = name.slice(0, 2).toUpperCase();
+  const userData  = getCurrentUserData();
+  const name      = userData?.displayName || "Référent";
+  const role      = userData?.role || "referent";
+  const initials  = name.slice(0, 2).toUpperCase();
+  const adminUser = role === "admin";
 
-  const linksHtml = NAV_LINKS.map(l => `
+  const visibleLinks = NAV_LINKS.filter(l => !l.adminOnly || adminUser);
+
+  const linksHtml       = visibleLinks.map(l => `
     <a href="${l.href}" class="nav-link ${activePage === l.key ? "active" : ""}">${l.label}</a>
   `).join("");
 
-  const mobileLinksHtml = NAV_LINKS.map(l => `
+  const mobileLinksHtml = visibleLinks.map(l => `
     <a href="${l.href}" class="nav-link ${activePage === l.key ? "active" : ""}"
        style="font-size:.9rem;padding:9px 12px">${l.label}</a>
   `).join("");
@@ -127,7 +132,13 @@ export function formatDateShort(ts) {
 // ── Status helpers ────────────────────────────────────────────
 
 export function statusClass(status) {
-  const map = { "Validé": "valid", "Refusé": "refused", "En débat": "debate" };
+  const map = {
+    "Validé":     "valid",
+    "Refusé":     "refused",
+    "En débat":   "debate",
+    "En attente": "pending",
+    "Archivée":   "archived"
+  };
   return map[status] || "default";
 }
 

@@ -7,11 +7,17 @@ let editingId   = null;
 let unsubscribe = null;
 
 const TYPE_COLORS = {
-  "Gang":             "#22c55e",
-  "Mafia":            "#f97316",
-  "Cartel":           "#ef4444",
+  "Gang":                 "#22c55e",
+  "Mafia":                "#f97316",
+  "Cartel":               "#ef4444",
   "MC / Groupe atypique": "#c084fc",
-  "Indépendant":      "#6b7280"
+  "Indépendant":          "#6b7280"
+};
+
+const STATUT_CLASS = {
+  "Actif":      "faction-statut-actif",
+  "En suspens": "faction-statut-suspens",
+  "Dissoute":   "faction-statut-dissoute"
 };
 
 requireAuth(() => {
@@ -26,6 +32,7 @@ requireAuth(() => {
   document.getElementById("faction-form-cancel").addEventListener("click", closeModal);
   document.getElementById("faction-form").addEventListener("submit", handleSubmit);
   document.getElementById("modal-overlay").addEventListener("click", closeModal);
+  document.getElementById("lead-history-overlay").addEventListener("click", closeLeadHistory);
 });
 
 window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); });
@@ -50,16 +57,24 @@ function renderFactions() {
 }
 
 function factionCard(f) {
-  const color = TYPE_COLORS[f.type] || "#6b7280";
-  const admin = isAdmin();
+  const color      = TYPE_COLORS[f.type] || "#6b7280";
+  const admin      = isAdmin();
+  const statut     = f.statut || "Actif";
+  const statutCls  = STATUT_CLASS[statut] || "";
+  const hasHistory = (f.leadHistory || []).length > 0;
+
   return `
     <div class="detail-card" style="border-left: 3px solid ${color}; cursor:default">
       <div class="card-header-bar" style="padding:14px 18px">
         <div style="flex:1">
           <div style="font-size:1rem;font-weight:800;color:var(--text-primary)">${f.nom}</div>
-          <span class="badge" style="background:${color}20;color:${color};border-color:${color}40;margin-top:4px">${f.type}</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+            <span class="badge" style="background:${color}20;color:${color};border-color:${color}40">${f.type}</span>
+            <span class="${statutCls}" style="font-size:.78rem">${statut}</span>
+          </div>
         </div>
         <div style="display:flex;gap:6px">
+          ${hasHistory ? `<button class="btn-icon" title="Historique leads" onclick="showLeadHistory('${f.id}')">📋</button>` : ""}
           <button class="btn-icon" title="Modifier" onclick="openEditModal('${f.id}')">✎</button>
           ${admin ? `<button class="btn-icon danger" title="Supprimer" onclick="handleDeleteFaction('${f.id}','${esc(f.nom)}')">✕</button>` : ""}
         </div>
@@ -87,17 +102,18 @@ function factionCard(f) {
     </div>`;
 }
 
-// ── Modal ─────────────────────────────────────────────────────
+// ── Modal faction ─────────────────────────────────────────────
 
 window.openEditModal = (id) => openModal(allFactions.find(f => f.id === id));
 
 function openModal(faction) {
   editingId = faction ? faction.id : null;
-  document.getElementById("modal-title").textContent = faction ? "Modifier la faction" : "Nouvelle faction";
-  document.getElementById("faction-submit").textContent = faction ? "Enregistrer" : "Créer";
+  document.getElementById("modal-title").textContent     = faction ? "Modifier la faction" : "Nouvelle faction";
+  document.getElementById("faction-submit").textContent  = faction ? "Enregistrer" : "Créer";
 
   document.getElementById("f-nom").value      = faction?.nom      || "";
   document.getElementById("f-type").value     = faction?.type     || "";
+  document.getElementById("f-statut").value   = faction?.statut   || "Actif";
   document.getElementById("f-lead").value     = faction?.lead     || "";
   document.getElementById("f-colead").value   = faction?.coLead   || "";
   document.getElementById("f-business").value = faction?.business || "";
@@ -118,6 +134,7 @@ async function handleSubmit(ev) {
   const data = {
     nom:      document.getElementById("f-nom").value,
     type:     document.getElementById("f-type").value,
+    statut:   document.getElementById("f-statut").value,
     lead:     document.getElementById("f-lead").value,
     coLead:   document.getElementById("f-colead").value,
     business: document.getElementById("f-business").value
@@ -144,6 +161,39 @@ async function handleSubmit(ev) {
     btn.textContent = editingId ? "Enregistrer" : "Créer";
   }
 }
+
+// ── Historique des leads ──────────────────────────────────────
+
+window.showLeadHistory = (id) => {
+  const faction = allFactions.find(f => f.id === id);
+  if (!faction) return;
+
+  const history = (faction.leadHistory || []).slice().reverse();
+  document.getElementById("lead-history-title").textContent = `Historique — ${faction.nom}`;
+
+  const body = document.getElementById("lead-history-body");
+  if (!history.length) {
+    body.innerHTML = `<div style="color:var(--text-muted);font-size:.82rem;padding:8px 0">Aucun changement enregistré.</div>`;
+  } else {
+    body.innerHTML = history.map(h => {
+      const d = new Date(h.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const changes = (h.changes || []).map(c =>
+        `<span style="color:var(--text-secondary)">${c.champ} :</span> <span style="color:var(--s-refused)">${c.avant}</span> → <span style="color:var(--s-valid)">${c.apres}</span>`
+      ).join(" · ");
+      return `<div class="lead-history-item"><span style="font-weight:600;color:var(--text-primary)">${d}</span> par ${h.by} — ${changes}</div>`;
+    }).join("");
+  }
+
+  document.getElementById("lead-history-modal").style.display  = "flex";
+  document.getElementById("lead-history-overlay").style.display = "flex";
+};
+
+window.closeLeadHistory = () => {
+  document.getElementById("lead-history-modal").style.display  = "none";
+  document.getElementById("lead-history-overlay").style.display = "none";
+};
+
+// ── Delete ────────────────────────────────────────────────────
 
 window.handleDeleteFaction = async (id, nom) => {
   const ok = await confirmModal("Supprimer", `Supprimer <strong>${nom}</strong> ?`, "Supprimer");

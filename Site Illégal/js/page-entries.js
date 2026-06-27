@@ -1,22 +1,22 @@
 import { requireAuth, canEdit } from "./auth.js";
-import { subscribeEntries, deleteEntry } from "./entries.js";
+import { subscribeEntries, deleteEntry, togglePin } from "./entries.js";
 import {
   renderNavbar, showToast, confirmModal, formatDate,
   statusClass, statusBadge, catBadge, factionBadges, normalizeFactions, showSpinner
 } from "./ui-shared.js";
 
-// section = "decisions" | "factions" | "propositions"
-// Récupéré depuis l'URL ou défaut "decisions"
 const SECTION_KEY  = new URLSearchParams(window.location.search).get("section") || "decisions";
 const SECTION_MAP  = { decisions: "Décisions", factions: "Factions", propositions: "Propositions & Dossiers" };
 
-let allEntries = [];
-let viewMode   = localStorage.getItem("fw-view") || "cards";
-let unsubscribe = null;
+let allEntries     = [];
+let viewMode       = localStorage.getItem("fw-view") || "cards";
+let showArchived   = false;
+let unsubscribe    = null;
 
 requireAuth(async () => {
   renderNavbar(SECTION_KEY);
   setupViewToggle();
+  setupArchivedToggle();
   setSectionTab(SECTION_KEY);
   showSpinner("entries-container");
 
@@ -41,8 +41,7 @@ function setSectionTab(key) {
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".section-tab").forEach(btn => {
     btn.addEventListener("click", () => {
-      const s = btn.dataset.section;
-      window.location.href = `/entries.html?section=${s}`;
+      window.location.href = `/entries.html?section=${btn.dataset.section}`;
     });
   });
 
@@ -51,26 +50,48 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   setupViewToggle();
+  setupArchivedToggle();
 });
 
 // ── View toggle ───────────────────────────────────────────────
 
 function setupViewToggle() {
-  const btnCards = document.getElementById("btn-view-cards");
-  const btnTable = document.getElementById("btn-view-table");
+  const btnCards  = document.getElementById("btn-view-cards");
+  const btnTable  = document.getElementById("btn-view-table");
+  const btnKanban = document.getElementById("btn-view-kanban");
   if (!btnCards) return;
 
-  btnCards.classList.toggle("active", viewMode === "cards");
-  btnTable.classList.toggle("active", viewMode === "table");
+  const setActive = mode => {
+    btnCards.classList.toggle("active",  mode === "cards");
+    btnTable.classList.toggle("active",  mode === "table");
+    btnKanban.classList.toggle("active", mode === "kanban");
+  };
+
+  setActive(viewMode);
 
   btnCards.addEventListener("click", () => {
     viewMode = "cards"; localStorage.setItem("fw-view", "cards");
-    btnCards.classList.add("active"); btnTable.classList.remove("active");
-    renderEntries();
+    setActive("cards"); renderEntries();
   });
   btnTable.addEventListener("click", () => {
     viewMode = "table"; localStorage.setItem("fw-view", "table");
-    btnTable.classList.add("active"); btnCards.classList.remove("active");
+    setActive("table"); renderEntries();
+  });
+  btnKanban.addEventListener("click", () => {
+    viewMode = "kanban"; localStorage.setItem("fw-view", "kanban");
+    setActive("kanban"); renderEntries();
+  });
+}
+
+// ── Archived toggle ───────────────────────────────────────────
+
+function setupArchivedToggle() {
+  const btn = document.getElementById("archived-toggle");
+  if (!btn) return;
+  btn.classList.toggle("active", showArchived);
+  btn.addEventListener("click", () => {
+    showArchived = !showArchived;
+    btn.classList.toggle("active", showArchived);
     renderEntries();
   });
 }
@@ -80,13 +101,13 @@ function setupViewToggle() {
 function getSectionForEntry(e) {
   if (e.section) return e.section;
   const catMap = {
-    "Fiche faction":                       "factions",
-    "Règle faction":                       "factions",
-    "Accord inter-faction":                "factions",
-    "Proposition règlement":               "propositions",
-    "Idée mécanique":                      "propositions",
-    "Ajout serveur (règle, mécanique)":    "propositions",
-    "Autre":                               "propositions"
+    "Fiche faction":                    "factions",
+    "Règle faction":                    "factions",
+    "Accord inter-faction":             "factions",
+    "Proposition règlement":            "propositions",
+    "Idée mécanique":                   "propositions",
+    "Ajout serveur (règle, mécanique)": "propositions",
+    "Autre":                            "propositions"
   };
   return catMap[e.category] || "decisions";
 }
@@ -97,20 +118,29 @@ function filteredEntries() {
   const faction = document.getElementById("filter-factions")?.value || "";
   const search  = (document.getElementById("search-input")?.value  || "").toLowerCase().trim();
 
-  return allEntries.filter(e => {
-    if (getSectionForEntry(e) !== SECTION_KEY) return false;
-    if (cat    && e.category !== cat)           return false;
-    if (status && e.status   !== status)        return false;
-    if (faction) {
-      const facs = normalizeFactions(e.factions || e.faction);
-      if (!facs.includes(faction) && !facs.includes("Toutes")) return false;
-    }
-    if (search) {
-      const hay = `${e.title} ${e.description} ${e.authorName} ${e.category}`.toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    return true;
-  });
+  return allEntries
+    .filter(e => {
+      if (getSectionForEntry(e) !== SECTION_KEY) return false;
+      // Archivées masquées par défaut sauf si toggle actif ou filtre statut explicite
+      if (!showArchived && e.status === "Archivée" && !status) return false;
+      if (cat    && e.category !== cat)   return false;
+      if (status && e.status   !== status) return false;
+      if (faction) {
+        const facs = normalizeFactions(e.factions || e.faction);
+        if (!facs.includes(faction) && !facs.includes("Toutes")) return false;
+      }
+      if (search) {
+        const hay = `${e.title} ${e.description} ${e.authorName} ${e.category}`.toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    })
+    // Épinglées en premier
+    .sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return 0;
+    });
 }
 
 // ── Render ────────────────────────────────────────────────────
@@ -131,8 +161,9 @@ function renderEntries() {
     return;
   }
 
-  if (viewMode === "cards") renderCards(entries, container);
-  else                      renderTable(entries, container);
+  if (viewMode === "table")  renderTable(entries, container);
+  else if (viewMode === "kanban") renderKanban(entries, container);
+  else                       renderCards(entries, container);
 }
 
 function renderCards(entries, container) {
@@ -140,6 +171,7 @@ function renderCards(entries, container) {
     const cls      = statusClass(e.status);
     const replaced = !!e.replacedBy;
     const facHtml  = factionBadges(e.factions || e.faction);
+    const pinHtml  = e.pinned ? `<span class="pinned-badge">📌 Épinglé</span>` : "";
     return `
       <div class="entry-card ${replaced ? "is-replaced" : ""}"
            onclick="window.location.href='/entry-detail.html?id=${e.id}&section=${SECTION_KEY}'">
@@ -149,6 +181,7 @@ function renderCards(entries, container) {
             <div class="card-title">${e.title}</div>
             ${statusBadge(e.status, replaced)}
           </div>
+          ${pinHtml ? `<div style="margin-bottom:4px">${pinHtml}</div>` : ""}
           <p class="card-desc">${e.description}</p>
           <div class="card-tags">
             ${catBadge(e.category)}
@@ -164,6 +197,8 @@ function renderCards(entries, container) {
           </div>
           <div class="card-actions" onclick="event.stopPropagation()">
             ${canEdit(e) ? `
+              <button class="pin-btn ${e.pinned ? "pinned" : ""}" title="${e.pinned ? "Désépingler" : "Épingler"}"
+                onclick="event.stopPropagation();handlePin('${e.id}',${!!e.pinned})">📌</button>
               <button class="btn-icon" title="Modifier"
                 onclick="event.stopPropagation();window.location.href='/entry-form.html?id=${e.id}&section=${SECTION_KEY}'">✎</button>
               <button class="btn-icon danger" title="Supprimer"
@@ -183,7 +218,9 @@ function renderTable(entries, container) {
     return `
       <tr class="${replaced ? "is-replaced" : ""}"
           onclick="window.location.href='/entry-detail.html?id=${e.id}&section=${SECTION_KEY}'">
-        <td class="table-title">${e.title}${replaced ? `<small>Remplacée</small>` : ""}</td>
+        <td class="table-title">
+          ${e.pinned ? "📌 " : ""}${e.title}${replaced ? `<small>Remplacée</small>` : ""}
+        </td>
         <td>${catBadge(e.category)}</td>
         <td>${statusBadge(e.status, replaced)}</td>
         <td>${facHtml || `<span style="color:var(--text-muted)">—</span>`}</td>
@@ -191,6 +228,8 @@ function renderTable(entries, container) {
         <td style="color:var(--text-muted);font-size:.78rem;white-space:nowrap">${formatDate(e.createdAt)}</td>
         <td class="table-actions" onclick="event.stopPropagation()">
           ${canEdit(e) ? `
+            <button class="pin-btn ${e.pinned ? "pinned" : ""}" title="${e.pinned ? "Désépingler" : "Épingler"}"
+              onclick="handlePin('${e.id}',${!!e.pinned})">📌</button>
             <button class="btn-icon" onclick="window.location.href='/entry-form.html?id=${e.id}&section=${SECTION_KEY}'">✎</button>
             <button class="btn-icon danger" onclick="handleDelete('${e.id}','${esc(e.title)}')">✕</button>
           ` : ""}
@@ -211,6 +250,69 @@ function renderTable(entries, container) {
       </table>
     </div>`;
 }
+
+function renderKanban(entries, container) {
+  const VOTES_NEEDED = 3;
+  const cols = {
+    pending: { label: "En cours", cls: "pending", entries: [] },
+    valid:   { label: "Validé",   cls: "valid",   entries: [] },
+    refused: { label: "Refusé",   cls: "refused",  entries: [] }
+  };
+
+  entries.forEach(e => {
+    if (e.status === "Validé")   cols.valid.entries.push(e);
+    else if (e.status === "Refusé") cols.refused.entries.push(e);
+    else if (e.status !== "Archivée") cols.pending.entries.push(e);
+  });
+
+  const colsHtml = Object.entries(cols).map(([key, col]) => {
+    const cards = col.entries.map(e => {
+      const vFor     = (e.votesFor     || []).length;
+      const vAgainst = (e.votesAgainst || []).length;
+      const isPropo  = e.section === "propositions";
+      const pctFor   = Math.min(100, Math.round((vFor / VOTES_NEEDED) * 100));
+      return `
+        <div class="kanban-card" onclick="window.location.href='/entry-detail.html?id=${e.id}&section=${SECTION_KEY}'">
+          ${e.pinned ? `<div class="pinned-badge" style="margin-bottom:5px;font-size:.6rem">📌 Épinglé</div>` : ""}
+          <div class="kanban-card-title">${e.title}</div>
+          <div class="kanban-card-meta">
+            ${catBadge(e.category)}
+            <span>· ${e.authorName}</span>
+          </div>
+          ${isPropo ? `
+            <div class="kanban-vote-row">
+              <span style="color:#22c55e">👍${vFor}</span>
+              <span style="color:#ef4444">👎${vAgainst}</span>
+              <div class="vote-bar-track" style="flex:1;height:4px">
+                <div class="vote-bar-fill vote-for" style="width:${pctFor}%;height:4px"></div>
+              </div>
+            </div>` : ""}
+        </div>`;
+    }).join("") || `<div style="padding:12px;text-align:center;font-size:.78rem;color:var(--text-muted)">Aucune</div>`;
+
+    return `
+      <div class="kanban-col col-${key}">
+        <div class="kanban-col-header">
+          <span class="kanban-col-title ${key}">${col.label}</span>
+          <span class="kanban-col-count ${key}">${col.entries.length}</span>
+        </div>
+        <div class="kanban-cards">${cards}</div>
+      </div>`;
+  }).join("");
+
+  container.innerHTML = `<div class="kanban-board">${colsHtml}</div>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────
+
+window.handlePin = async (id, currentlyPinned) => {
+  try {
+    await togglePin(id, currentlyPinned);
+    showToast(currentlyPinned ? "Entrée désépinglée." : "Entrée épinglée.", "success");
+  } catch (err) {
+    showToast("Erreur.", "error"); console.error(err);
+  }
+};
 
 window.handleDelete = async (id, title) => {
   const ok = await confirmModal(

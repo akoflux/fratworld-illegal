@@ -29,10 +29,12 @@ export async function createEntry(data) {
     description:    data.description.trim(),
     status:         data.status,
     factions:       data.factions || [],
+    pinned:         false,
     replacedBy:      null,
     replacedByTitle: null,
     replaces:        data.replaces      || null,
     replacesTitle:   data.replacesTitle || null,
+    voteDeadline:    data.voteDeadline  || null,
     authorUid:  uid,
     authorName: name,
     createdAt:  serverTimestamp(),
@@ -55,7 +57,7 @@ export async function createEntry(data) {
 export async function updateEntry(id, data, original) {
   const { uid, name } = authorInfo();
 
-  const TRACKED = ["title", "section", "category", "description", "status", "replaces"];
+  const TRACKED = ["title", "section", "category", "description", "status", "replaces", "voteDeadline"];
   const changes = TRACKED
     .filter(f => String(data[f] ?? "") !== String(original[f] ?? ""))
     .map(f => ({ field: f, oldValue: original[f] ?? null, newValue: data[f] ?? null }));
@@ -74,6 +76,7 @@ export async function updateEntry(id, data, original) {
     factions:      data.factions || [],
     replaces:      data.replaces      || null,
     replacesTitle: data.replacesTitle || null,
+    voteDeadline:  data.voteDeadline  || null,
     updatedAt:     serverTimestamp()
   };
 
@@ -101,6 +104,13 @@ export async function deleteEntry(id) {
   await deleteDoc(doc(db, "entries", id));
 }
 
+export async function togglePin(id, currentlyPinned) {
+  await updateDoc(doc(db, "entries", id), {
+    pinned: !currentlyPinned,
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function getEntry(id) {
   const snap = await getDoc(doc(db, "entries", id));
   if (!snap.exists()) return null;
@@ -114,7 +124,6 @@ export async function getEntries() {
 }
 
 // Temps réel — appelle callback(entries[]) à chaque changement.
-// Retourne la fonction de désabonnement.
 export function subscribeEntries(callback) {
   const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
   return onSnapshot(q, snap => {
@@ -125,22 +134,45 @@ export function subscribeEntries(callback) {
 
 const VOTES_NEEDED = 3;
 
-export async function voteEntry(id, direction, currentFor, currentAgainst) {
+export async function voteEntry(id, direction, currentFor, currentAgainst, currentAbstain) {
   const { uid, name } = authorInfo();
+
+  currentFor     = currentFor     || [];
+  currentAgainst = currentAgainst || [];
+  currentAbstain = currentAbstain || [];
+
+  // Vérification deadline
+  const snap0 = await getDoc(doc(db, "entries", id));
+  const entryData = snap0.data();
+  if (entryData?.voteDeadline) {
+    const deadline = new Date(entryData.voteDeadline);
+    if (deadline < new Date()) {
+      throw new Error("Le vote est clôturé (deadline dépassée).");
+    }
+  }
 
   const hadVotedFor     = currentFor.includes(uid);
   const hadVotedAgainst = currentAgainst.includes(uid);
+  const hadAbstained    = currentAbstain.includes(uid);
 
   const update = { updatedAt: serverTimestamp() };
+
   if (direction === "for") {
     update.votesFor = arrayUnion(uid);
     if (hadVotedAgainst) update.votesAgainst = arrayRemove(uid);
-  } else {
+    if (hadAbstained)    update.votesAbstain  = arrayRemove(uid);
+  } else if (direction === "against") {
     update.votesAgainst = arrayUnion(uid);
-    if (hadVotedFor) update.votesFor = arrayRemove(uid);
+    if (hadVotedFor)  update.votesFor    = arrayRemove(uid);
+    if (hadAbstained) update.votesAbstain = arrayRemove(uid);
+  } else {
+    // abstain
+    update.votesAbstain = arrayUnion(uid);
+    if (hadVotedFor)     update.votesFor     = arrayRemove(uid);
+    if (hadVotedAgainst) update.votesAgainst = arrayRemove(uid);
   }
 
-  // Recalcul des comptes après changement éventuel de camp
+  // Recalcul des comptes
   const newForCount = direction === "for"
     ? (hadVotedFor ? currentFor.length : currentFor.length + 1)
     : (hadVotedFor ? currentFor.length - 1 : currentFor.length);
@@ -159,9 +191,9 @@ export async function voteEntry(id, direction, currentFor, currentAgainst) {
 
   await updateDoc(doc(db, "entries", id), update);
   await addHistory(id, "update", [{
-    field: direction === "for" ? "votesFor" : "votesAgainst",
+    field: direction === "for" ? "votesFor" : direction === "against" ? "votesAgainst" : "votesAbstain",
     oldValue: null,
-    newValue: `${name} a voté ${direction === "for" ? "Pour" : "Contre"}`
+    newValue: `${name} a voté ${direction === "for" ? "Pour" : direction === "against" ? "Contre" : "Abstention"}`
   }]);
 
   if (finalStatus) {

@@ -9,6 +9,7 @@ requireAuth(async () => {
   unsubscribe = subscribeEntries(entries => {
     renderStats(entries);
     renderBreakdown(entries);
+    renderPinned(entries);
     renderVotes(entries);
     renderActivity(entries);
   });
@@ -23,7 +24,7 @@ function renderStats(entries) {
   document.getElementById("stat-total").textContent   = entries.length;
   document.getElementById("stat-valid").textContent   = entries.filter(e => e.status === "Validé").length;
   document.getElementById("stat-refused").textContent = entries.filter(e => e.status === "Refusé").length;
-  document.getElementById("stat-debate").textContent  = entries.filter(e => e.status === "En débat").length;
+  document.getElementById("stat-debate").textContent  = entries.filter(e => e.status === "En débat" || e.status === "En attente").length;
 }
 
 function renderBreakdown(entries) {
@@ -37,9 +38,7 @@ function renderBreakdown(entries) {
     "Proposition règlement":  "#22c55e",
     "Idée mécanique":         "#4ade80",
     "Ajout serveur (règle, mécanique)": "#86efac",
-    "Autre":                  "#6b7280",
-    "Décision & position prise":       "#f97316",
-    "Historique débat staff":          "#fed7aa"
+    "Autre":                  "#6b7280"
   };
 
   const catCounts = {};
@@ -77,6 +76,33 @@ function renderBreakdown(entries) {
   document.getElementById("breakdown-fac").innerHTML = secHtml;
 }
 
+function renderPinned(entries) {
+  const container = document.getElementById("pinned-list");
+  const panel     = document.getElementById("pinned-panel");
+  if (!container) return;
+
+  const pinned = entries.filter(e => e.pinned);
+
+  if (!pinned.length) {
+    panel.style.display = "none";
+    return;
+  }
+
+  panel.style.display = "";
+  container.innerHTML = pinned.map(e => {
+    const cls = statusClass(e.status);
+    return `
+      <div class="activity-item" onclick="window.location.href='/entry-detail.html?id=${e.id}&section=${e.section||'decisions'}'">
+        <div class="activity-dot ${cls}"></div>
+        <div class="activity-content">
+          <div class="activity-title">📌 ${e.title}</div>
+          <div class="activity-meta">${e.authorName} · ${e.category} · ${formatDate(e.createdAt)}</div>
+        </div>
+        ${statusBadge(e.status, !!e.replacedBy)}
+      </div>`;
+  }).join("");
+}
+
 const VOTES_NEEDED = 3;
 
 function renderVotes(entries) {
@@ -86,7 +112,8 @@ function renderVotes(entries) {
   const open = entries.filter(e =>
     e.section === "propositions" &&
     e.status !== "Validé" &&
-    e.status !== "Refusé"
+    e.status !== "Refusé" &&
+    e.status !== "Archivée"
   );
 
   if (!open.length) {
@@ -97,18 +124,30 @@ function renderVotes(entries) {
   container.innerHTML = open.map(e => {
     const vFor     = (e.votesFor     || []).length;
     const vAgainst = (e.votesAgainst || []).length;
+    const vAbstain = (e.votesAbstain || []).length;
     const pctFor     = Math.min(100, Math.round((vFor     / VOTES_NEEDED) * 100));
     const pctAgainst = Math.min(100, Math.round((vAgainst / VOTES_NEEDED) * 100));
+
+    let deadlineHtml = "";
+    if (e.voteDeadline) {
+      const dl = new Date(e.voteDeadline);
+      const expired = dl < new Date();
+      const dlStr = dl.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+      deadlineHtml = `<span class="vote-deadline ${expired ? "expired" : ""}" style="font-size:.7rem;padding:2px 8px">⏰ ${dlStr}</span>`;
+    }
 
     return `
       <div class="activity-item" style="flex-direction:column;align-items:stretch;gap:8px;cursor:pointer"
            onclick="window.location.href='/entry-detail.html?id=${e.id}&section=propositions'">
-        <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           <div>
             <div class="activity-title">${e.title}</div>
             <div class="activity-meta">${e.category} · ${e.authorName} · ${formatDate(e.createdAt)}</div>
           </div>
-          <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">${vFor + vAgainst} vote(s)</span>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap">${vFor + vAgainst + vAbstain} vote(s)</span>
+            ${deadlineHtml}
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px">
           <div class="vote-bar-row" style="font-size:.75rem">
@@ -125,6 +164,7 @@ function renderVotes(entries) {
             </div>
             <span class="vote-bar-count" style="min-width:32px;text-align:right">${vAgainst}/${VOTES_NEEDED}</span>
           </div>
+          ${vAbstain ? `<div style="font-size:.7rem;color:var(--text-muted)">${vAbstain} abstention(s)</div>` : ""}
         </div>
       </div>`;
   }).join("");
@@ -142,10 +182,10 @@ function renderActivity(entries) {
   container.innerHTML = recent.map(e => {
     const cls = statusClass(e.status);
     return `
-      <div class="activity-item" onclick="window.location.href='/entry-detail.html?id=${e.id}'">
+      <div class="activity-item" onclick="window.location.href='/entry-detail.html?id=${e.id}&section=${e.section||'decisions'}'">
         <div class="activity-dot ${cls}"></div>
         <div class="activity-content">
-          <div class="activity-title">${e.title}</div>
+          <div class="activity-title">${e.pinned ? "📌 " : ""}${e.title}</div>
           <div class="activity-meta">${e.authorName} · ${e.category} · ${formatDate(e.createdAt)}</div>
         </div>
         ${statusBadge(e.status, !!e.replacedBy)}
