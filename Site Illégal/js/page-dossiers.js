@@ -168,7 +168,7 @@ window.handleVote = async (id) => {
   const d = allDossiers.find(x => x.id === id);
   if (!d) return;
   try {
-    await voteDossier(id, d.votes || []);
+    await voteDossier(id, d, d.votes || []);
     showToast("Vote enregistré.", "success");
   } catch (err) {
     showToast("Erreur lors du vote.", "error"); console.error(err);
@@ -176,6 +176,7 @@ window.handleVote = async (id) => {
 };
 
 window.handleArchive = async (id, decision) => {
+  const d  = allDossiers.find(x => x.id === id);
   const ok = await confirmModal(
     `${decision} le dossier ?`,
     `Cette action est irréversible. Le dossier sera archivé.`,
@@ -183,7 +184,7 @@ window.handleArchive = async (id, decision) => {
   );
   if (!ok) return;
   try {
-    await archiveDossier(id, decision);
+    await archiveDossier(id, d, decision);
     showToast(`Dossier ${decision.toLowerCase()}.`, "success");
   } catch (err) {
     showToast("Erreur.", "error"); console.error(err);

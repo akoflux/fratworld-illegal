@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/dossiers.html",     label: "Dossiers",    key: "dossiers"   },
   { href: "/entries.html?section=propositions", label: "Propositions", key: "propositions" },
   { href: "/relations.html",    label: "Relations",   key: "relations"  },
+  { href: "/map.html",          label: "Carte",       key: "map"        },
   { href: "/tasks.html",        label: "Tâches",      key: "tasks"      },
   { href: "/agenda.html",       label: "Agenda",      key: "agenda"     },
   { href: "/documents.html",    label: "Documents",   key: "documents"  },

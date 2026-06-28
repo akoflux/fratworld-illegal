@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carte Los Santos — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    .map-layout {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - var(--nav-h));
+    }
+
+    .map-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .map-toolbar-title {
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--text-primary);
+      margin-right: 6px;
+    }
+
+    .map-mode-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: .82rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .map-mode-btn.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .map-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .75rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    #map-container {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #0c0f18;
+    }
+
+    /* Cursor crosshair en mode placement */
+    #map.placing-mode { cursor: crosshair !important; }
+
+    .map-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.75);
+      color: #fff;
+      padding: 7px 16px;
+      border-radius: 99px;
+      font-size: .8rem;
+      z-index: 500;
+      pointer-events: none;
+      display: none;
+    }
+    .map-hint.visible { display: block; }
+
+    /* Leaflet overrides */
+    .leaflet-container { background: #0c0f18; }
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-lg);
+    }
+    .leaflet-popup-tip { background: var(--bg-card); }
+    .leaflet-popup-close-button { color: var(--text-muted) !important; }
+    .leaflet-control-zoom a {
+      background: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border) !important;
+    }
+    .leaflet-control-zoom a:hover { background: var(--bg-card-hover) !important; }
+
+    /* Marqueur SVG custom */
+    .map-marker-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 2px solid rgba(0,0,0,.3);
+    }
+    .map-marker-inner {
+      transform: rotate(45deg);
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    /* Popup contenu */
+    .popup-title {
+      font-weight: 700;
+      font-size: .95rem;
+      margin-bottom: 4px;
+    }
+    .popup-cat {
+      font-size: .72rem;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .popup-desc {
+      font-size: .8rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .popup-meta {
+      font-size: .7rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .popup-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .popup-actions button {
+      font-size: .75rem;
+      padding: 3px 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="app-wrapper" style="height:100vh;overflow:hidden">
+  <div id="navbar"></div>
+
+  <div class="map-layout">
+    <div class="map-toolbar">
+      <span class="map-toolbar-title">🗺 Carte Los Santos</span>
+      <button id="btn-view" class="map-mode-btn active">👁 Vue</button>
+      <button id="btn-place" class="map-mode-btn">📍 Placer un point</button>
+      <span id="marker-count" style="font-size:.78rem;color:var(--text-muted)"></span>
+      <div class="map-legend" id="map-legend"></div>
+    </div>
+
+    <div id="map-container">
+      <div id="map"></div>
+      <div class="map-hint" id="map-hint">Cliquez sur la carte pour placer un marqueur</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ajout marqueur -->
+<div id="marker-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000"></div>
+<div id="marker-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1001;width:100%;max-width:440px;padding:16px">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 style="margin-bottom:18px;font-size:1rem">Nouveau point</h2>
+    <form id="marker-form">
+      <div class="form-group">
+        <label>Label <span class="required">*</span></label>
+        <input id="m-label" type="text" class="form-control" placeholder="Planque Vagos, Deal spot…" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Catégorie</label>
+          <select id="m-category" class="form-control">
+            <option value="territoire">🏴 Territoire</option>
+            <option value="planque">🏠 Planque</option>
+            <option value="deal">💊 Point de deal</option>
+            <option value="evenement">⚡ Événement</option>
+            <option value="danger">⚠️ Zone dangereuse</option>
+            <option value="point">📍 Point d'intérêt</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Couleur</label>
+          <select id="m-color" class="form-control">
+            <option value="#ef4444">🔴 Rouge</option>
+            <option value="#f97316" selected>🟠 Orange</option>
+            <option value="#eab308">🟡 Jaune</option>
+            <option value="#22c55e">🟢 Vert</option>
+            <option value="#3b82f6">🔵 Bleu</option>
+            <option value="#c084fc">🟣 Violet</option>
+            <option value="#ffffff">⚪ Blanc</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="m-desc" class="form-control" style="min-height:60px" placeholder="Informations supplémentaires…"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="marker-cancel-btn" class="btn btn-secondary">Annuler</button>
+        <button type="submit" id="marker-submit-btn" class="btn btn-primary">Placer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="/js/page-map.js"></script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
+import { sendDossierNotification } from "./discord.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion
@@ -14,7 +15,10 @@ function authorInfo() {
 
 export async function createDossier(data) {
   const { uid, name } = authorInfo();
-  return addDoc(collection(db, "dossiers"), {
+  const settings    = await loadSettings();
+  const votesNeeded = getVotesNeeded(settings);
+
+  const payload = {
     nomGroupe:   data.nomGroupe.trim(),
     typeGroupe:  data.typeGroupe,
     lienDossier: data.lienDossier.trim(),
@@ -26,30 +30,44 @@ export async function createDossier(data) {
     authorName:  name,
     createdAt:   serverTimestamp(),
     updatedAt:   serverTimestamp()
-  });
+  };
+
+  const ref = await addDoc(collection(db, "dossiers"), payload);
+  await sendDossierNotification("dossier_create", { id: ref.id, ...payload, authorName: name }, votesNeeded);
+  return ref;
 }
 
-export async function voteDossier(id, currentVotes) {
+export async function voteDossier(id, dossier, currentVotes) {
   const { uid } = authorInfo();
   if (currentVotes.includes(uid)) return; // déjà voté
 
   const settings    = await loadSettings();
   const votesNeeded = getVotesNeeded(settings);
   const newVotes    = [...currentVotes, uid];
-  const updates     = {
-    votes:    arrayUnion(uid),
+  const thresholdReached = newVotes.length >= votesNeeded;
+
+  const updates = {
+    votes:     arrayUnion(uid),
     updatedAt: serverTimestamp()
   };
-
-  if (newVotes.length >= votesNeeded) {
-    updates.statut = "En attente d'entretien";
-  }
+  if (thresholdReached) updates.statut = "En attente d'entretien";
 
   await updateDoc(doc(db, "dossiers", id), updates);
+
+  if (thresholdReached) {
+    await sendDossierNotification(
+      "dossier_threshold",
+      { id, ...dossier, votes: newVotes, statut: "En attente d'entretien" },
+      votesNeeded
+    );
+  }
 }
 
-export async function archiveDossier(id, decision) {
-  const { uid, name } = authorInfo();
+export async function archiveDossier(id, dossier, decision) {
+  const { name } = authorInfo();
+  const settings    = await loadSettings();
+  const votesNeeded = getVotesNeeded(settings);
+
   await updateDoc(doc(db, "dossiers", id), {
     statut:     decision, // "Validé" | "Refusé"
     archived:   true,
@@ -57,6 +75,12 @@ export async function archiveDossier(id, decision) {
     archivedBy: name,
     updatedAt:  serverTimestamp()
   });
+
+  await sendDossierNotification(
+    "dossier_archive",
+    { id, ...dossier, statut: decision },
+    votesNeeded
+  );
 }
 
 export async function deleteDossier(id) {

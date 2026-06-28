@@ -121,5 +121,17 @@ service cloud.firestore {
                        (isReferentOrAdmin() &&
                         resource.data.authorUid == request.auth.uid);
     }
+
+    // ── markers (carte interactive) ────────────────────────────
+    match /markers/{markerId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
   }
 }
