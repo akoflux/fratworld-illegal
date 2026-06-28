@@ -60,29 +60,33 @@ export async function sendDossierNotification(type, dossier, votesNeeded) {
   const url = `${SITE_URL}/dossiers.html`;
   let title, description, color, fields, mentionRole = false;
 
-  const voteCount = dossier.votes?.length || 0;
+  // Backward compat : anciens docs n'ont que `votes`
+  const voteForCount     = dossier.votesFor?.length ?? dossier.votes?.length ?? 0;
+  const voteAgainstCount = dossier.votesAgainst?.length ?? 0;
 
   if (type === "dossier_create") {
     color       = 0x4f86f7;
     title       = `📂 Nouveau dossier — ${dossier.nomGroupe}`;
     description = `**${dossier.authorName}** a soumis un dossier de candidature.`;
     fields = [
-      { name: "Type de groupe", value: dossier.typeGroupe || "—",    inline: true },
-      { name: "Déposé par",     value: dossier.authorName || "—",    inline: true },
-      { name: "Votes requis",   value: String(votesNeeded ?? "—"),   inline: true }
+      { name: "Type de groupe", value: dossier.typeGroupe || "—",  inline: true },
+      { name: "Déposé par",     value: dossier.authorName || "—",  inline: true },
+      { name: "Votes requis",   value: String(votesNeeded ?? "—"), inline: true }
     ];
-    if (dossier.description) fields.push({ name: "Description", value: dossier.description.slice(0, 150), inline: false });
-    if (dossier.lienDossier) fields.push({ name: "🔗 Dossier",  value: dossier.lienDossier,               inline: false });
+    if (dossier.voteDeadline) fields.push({ name: "⏰ Deadline", value: fmtDate(dossier.voteDeadline), inline: true });
+    if (dossier.description)  fields.push({ name: "Description", value: dossier.description.slice(0, 150), inline: false });
+    if (dossier.lienDossier)  fields.push({ name: "🔗 Dossier",  value: dossier.lienDossier,               inline: false });
 
   } else if (type === "dossier_threshold") {
     mentionRole = true;
     color       = 0xeab308;
     title       = `🗳️ Seuil de votes atteint — ${dossier.nomGroupe}`;
-    description = `Le dossier a reçu **${voteCount}/${votesNeeded}** votes favorables.\nUn gestionnaire doit planifier l'entretien.`;
+    description = `Le dossier a reçu **${voteForCount}/${votesNeeded}** votes favorables.\nUn gestionnaire doit planifier l'entretien.`;
     fields = [
-      { name: "Type de groupe", value: dossier.typeGroupe || "—", inline: true },
-      { name: "Statut",         value: dossier.statut    || "—", inline: true },
-      { name: "Votes",          value: `${voteCount}/${votesNeeded}`, inline: true }
+      { name: "Type de groupe", value: dossier.typeGroupe || "—",            inline: true },
+      { name: "Statut",         value: dossier.statut    || "—",            inline: true },
+      { name: "👍 Pour",        value: `${voteForCount}/${votesNeeded}`,     inline: true },
+      { name: "👎 Contre",      value: String(voteAgainstCount),             inline: true }
     ];
     if (dossier.lienDossier) fields.push({ name: "🔗 Dossier", value: dossier.lienDossier, inline: false });
 
@@ -97,7 +101,8 @@ export async function sendDossierNotification(type, dossier, votesNeeded) {
     fields = [
       { name: "Type de groupe", value: dossier.typeGroupe || "—", inline: true },
       { name: "Décision",       value: dossier.statut    || "—", inline: true },
-      { name: "Total votes",    value: String(voteCount),        inline: true }
+      { name: "👍 Pour",        value: String(voteForCount),     inline: true },
+      { name: "👎 Contre",      value: String(voteAgainstCount), inline: true }
     ];
     if (dossier.lienDossier) fields.push({ name: "🔗 Dossier", value: dossier.lienDossier, inline: false });
   }

@@ -327,6 +327,47 @@ export function confirmModal(title, body, confirmLabel = "Confirmer") {
   });
 }
 
+// ── Reason prompt (vote contre) ───────────────────────────────
+
+export function promptReason(voteLabel, placeholder = "Expliquez votre décision… (optionnel)") {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal">
+        <h3>Motif — ${voteLabel}</h3>
+        <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:10px">
+          Visible par tous les référents. Champ optionnel.
+        </p>
+        <textarea class="form-control" id="reason-textarea"
+          style="min-height:90px;width:100%;margin-bottom:16px;resize:vertical"
+          placeholder="${placeholder}"></textarea>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="reason-cancel">Annuler</button>
+          <button class="btn btn-danger"    id="reason-confirm">${voteLabel}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const ta = overlay.querySelector("#reason-textarea");
+    ta.focus();
+
+    overlay.querySelector("#reason-cancel").addEventListener("click", () => {
+      overlay.remove(); resolve({ ok: false, reason: "" });
+    });
+    overlay.querySelector("#reason-confirm").addEventListener("click", () => {
+      const reason = ta.value.trim();
+      overlay.remove(); resolve({ ok: true, reason });
+    });
+    overlay.addEventListener("click", e => {
+      if (e.target === overlay) { overlay.remove(); resolve({ ok: false, reason: "" }); }
+    });
+    overlay.addEventListener("keydown", e => {
+      if (e.key === "Escape") { overlay.remove(); resolve({ ok: false, reason: "" }); }
+    });
+  });
+}
+
 export function showSpinner(containerId) {
   const el = document.getElementById(containerId);
   if (el) el.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div></div>`;

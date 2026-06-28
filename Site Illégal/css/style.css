@@ -2744,6 +2744,19 @@ mark.hl {
 .vote-name-label.against  { background: rgba(239,68,68,.15);   color: #ef4444; }
 .vote-name-label.abstain  { background: rgba(107,114,128,.15); color: #9ca3af; }
 
+.vote-reasons-list    { display: flex; flex-direction: column; gap: 2px; }
+.vote-reason-item     { font-size: .82rem; color: var(--text-secondary); }
+.vote-reason-text     { color: var(--text-muted); font-style: italic; }
+
+.dossier-against-reasons {
+  margin: 6px 0 4px;
+  padding: 8px 12px;
+  background: rgba(239,68,68,.07);
+  border-left: 3px solid rgba(239,68,68,.4);
+  border-radius: 4px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+
 /* ── Faction notes ───────────────────────────────────────────── */
 .faction-notes {
   font-size: .8rem;

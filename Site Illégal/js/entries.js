@@ -4,7 +4,7 @@ import { sendDiscordNotification } from "./discord.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
+  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion, arrayRemove, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -144,7 +144,7 @@ export function subscribeEntries(callback) {
   });
 }
 
-export async function voteEntry(id, direction, currentFor, currentAgainst, currentAbstain) {
+export async function voteEntry(id, direction, currentFor, currentAgainst, currentAbstain, reason = "") {
   const { uid, name } = authorInfo();
 
   currentFor     = currentFor     || [];
@@ -172,17 +172,24 @@ export async function voteEntry(id, direction, currentFor, currentAgainst, curre
 
   if (direction === "for") {
     update.votesFor = arrayUnion(uid);
-    if (hadVotedAgainst) update.votesAgainst = arrayRemove(uid);
-    if (hadAbstained)    update.votesAbstain  = arrayRemove(uid);
+    if (hadVotedAgainst) {
+      update.votesAgainst = arrayRemove(uid);
+      update[`votesAgainstReasons.${uid}`] = deleteField();
+    }
+    if (hadAbstained) update.votesAbstain = arrayRemove(uid);
   } else if (direction === "against") {
     update.votesAgainst = arrayUnion(uid);
     if (hadVotedFor)  update.votesFor    = arrayRemove(uid);
     if (hadAbstained) update.votesAbstain = arrayRemove(uid);
+    if (reason) update[`votesAgainstReasons.${uid}`] = reason;
   } else {
     // abstain
     update.votesAbstain = arrayUnion(uid);
     if (hadVotedFor)     update.votesFor     = arrayRemove(uid);
-    if (hadVotedAgainst) update.votesAgainst = arrayRemove(uid);
+    if (hadVotedAgainst) {
+      update.votesAgainst = arrayRemove(uid);
+      update[`votesAgainstReasons.${uid}`] = deleteField();
+    }
   }
 
   // Recalcul des comptes

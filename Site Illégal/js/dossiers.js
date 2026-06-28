@@ -4,7 +4,8 @@ import { loadSettings, getVotesNeeded } from "./settings.js";
 import { sendDossierNotification } from "./discord.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion
+  getDocs, query, orderBy, onSnapshot, serverTimestamp,
+  arrayUnion, arrayRemove, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -19,17 +20,21 @@ export async function createDossier(data) {
   const votesNeeded = getVotesNeeded(settings);
 
   const payload = {
-    nomGroupe:   data.nomGroupe.trim(),
-    typeGroupe:  data.typeGroupe,
-    lienDossier: data.lienDossier.trim(),
-    description: data.description.trim(),
-    votes:       [],
-    statut:      "En cours",
-    archived:    false,
-    authorUid:   uid,
-    authorName:  name,
-    createdAt:   serverTimestamp(),
-    updatedAt:   serverTimestamp()
+    nomGroupe:           data.nomGroupe.trim(),
+    typeGroupe:          data.typeGroupe,
+    lienDossier:         data.lienDossier.trim(),
+    description:         data.description?.trim() || "",
+    votes:               [],       // legacy field — conservé pour compat
+    votesFor:            [],
+    votesAgainst:        [],
+    votesAgainstReasons: {},
+    voteDeadline:        data.voteDeadline || null,
+    statut:              "En cours",
+    archived:            false,
+    authorUid:           uid,
+    authorName:          name,
+    createdAt:           serverTimestamp(),
+    updatedAt:           serverTimestamp()
   };
 
   const ref = await addDoc(collection(db, "dossiers"), payload);
@@ -37,27 +42,68 @@ export async function createDossier(data) {
   return ref;
 }
 
-export async function voteDossier(id, dossier, currentVotes) {
+export async function voteDossier(id, dossier, direction, reason = "") {
   const { uid } = authorInfo();
-  if (currentVotes.includes(uid)) return; // déjà voté
+
+  // Backward compat : anciens docs n'ont que `votes` (= votesFor)
+  const votesFor     = dossier.votesFor     || dossier.votes || [];
+  const votesAgainst = dossier.votesAgainst || [];
+
+  // Vérification deadline
+  if (dossier.voteDeadline) {
+    if (new Date(dossier.voteDeadline) < new Date()) {
+      throw new Error("Le vote est clôturé (deadline dépassée).");
+    }
+  }
+
+  const hadVotedFor     = votesFor.includes(uid);
+  const hadVotedAgainst = votesAgainst.includes(uid);
+
+  // Déjà dans la même direction → no-op
+  if (direction === "for"     && hadVotedFor)     return;
+  if (direction === "against" && hadVotedAgainst) return;
 
   const settings    = await loadSettings();
   const votesNeeded = getVotesNeeded(settings);
-  const newVotes    = [...currentVotes, uid];
-  const thresholdReached = newVotes.length >= votesNeeded;
 
-  const updates = {
-    votes:     arrayUnion(uid),
-    updatedAt: serverTimestamp()
-  };
-  if (thresholdReached) updates.statut = "En attente d'entretien";
+  const updates = { updatedAt: serverTimestamp() };
+
+  if (direction === "for") {
+    updates.votesFor = arrayUnion(uid);
+    if (hadVotedAgainst) {
+      updates.votesAgainst = arrayRemove(uid);
+      updates[`votesAgainstReasons.${uid}`] = deleteField();
+    }
+  } else {
+    // against
+    updates.votesAgainst = arrayUnion(uid);
+    if (hadVotedFor) updates.votesFor = arrayRemove(uid);
+    if (reason) updates[`votesAgainstReasons.${uid}`] = reason;
+  }
+
+  // Calcul du nouveau compte Pour après le vote
+  const newForCount = direction === "for"
+    ? (hadVotedFor   ? votesFor.length : votesFor.length + 1)
+    : (hadVotedFor   ? votesFor.length - 1 : votesFor.length);
+
+  // Seuil atteint seulement si on franchit pour la première fois
+  const wasAtThreshold = votesFor.length >= votesNeeded;
+  const nowAtThreshold = newForCount    >= votesNeeded;
+  const thresholdJustReached = nowAtThreshold && !wasAtThreshold;
+
+  if (thresholdJustReached) updates.statut = "En attente d'entretien";
 
   await updateDoc(doc(db, "dossiers", id), updates);
 
-  if (thresholdReached) {
+  if (thresholdJustReached) {
     await sendDossierNotification(
       "dossier_threshold",
-      { id, ...dossier, votes: newVotes, statut: "En attente d'entretien" },
+      {
+        id, ...dossier,
+        votesFor:    direction === "for" ? [...votesFor, uid] : votesFor.filter(u => u !== uid),
+        votesAgainst: direction === "against" ? [...votesAgainst, uid] : votesAgainst.filter(u => u !== uid),
+        statut: "En attente d'entretien"
+      },
       votesNeeded
     );
   }
@@ -94,4 +140,3 @@ export function subscribeDossiers(callback) {
     callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
   });
 }
-

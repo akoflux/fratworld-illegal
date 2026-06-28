@@ -2,7 +2,7 @@ import { requireAuth, canEdit, isAdmin, isSpectateur, getCurrentUser, getCurrent
 import { getEntry, getHistory, archiveEntry, voteEntry, togglePin } from "./entries.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
-  renderNavbar, showToast, confirmModal, formatDate,
+  renderNavbar, showToast, confirmModal, promptReason, formatDate,
   statusBadge, catBadge, factionBadges, normalizeFactions, getParam, showSpinner
 } from "./ui-shared.js";
 
@@ -232,14 +232,35 @@ async function loadVoteNames(e) {
   const allUids = [...(e.votesFor || []), ...(e.votesAgainst || []), ...(e.votesAbstain || [])];
   if (!allUids.length) return;
 
-  const names = await getUserNames(allUids);
-  const rows = [];
+  const names   = await getUserNames(allUids);
+  const reasons = e.votesAgainstReasons || {};
+  const rows    = [];
+
   if ((e.votesFor || []).length)
-    rows.push(`<div class="vote-name-row"><span class="vote-name-label for">👍 Pour</span><span>${(e.votesFor).map(u => escapeHtml(names.get(u) || u)).join(", ")}</span></div>`);
-  if ((e.votesAgainst || []).length)
-    rows.push(`<div class="vote-name-row"><span class="vote-name-label against">👎 Contre</span><span>${(e.votesAgainst).map(u => escapeHtml(names.get(u) || u)).join(", ")}</span></div>`);
+    rows.push(`<div class="vote-name-row">
+      <span class="vote-name-label for">👍 Pour</span>
+      <span>${e.votesFor.map(u => escapeHtml(names.get(u) || u)).join(", ")}</span>
+    </div>`);
+
+  if ((e.votesAgainst || []).length) {
+    const items = e.votesAgainst.map(u => {
+      const name   = escapeHtml(names.get(u) || u);
+      const reason = reasons[u]
+        ? `<em class="vote-reason-text"> — "${escapeHtml(reasons[u])}"</em>`
+        : "";
+      return `<div class="vote-reason-item">${name}${reason}</div>`;
+    }).join("");
+    rows.push(`<div class="vote-name-row">
+      <span class="vote-name-label against">👎 Contre</span>
+      <div class="vote-reasons-list">${items}</div>
+    </div>`);
+  }
+
   if ((e.votesAbstain || []).length)
-    rows.push(`<div class="vote-name-row"><span class="vote-name-label abstain">➖ Abstention</span><span>${(e.votesAbstain).map(u => escapeHtml(names.get(u) || u)).join(", ")}</span></div>`);
+    rows.push(`<div class="vote-name-row">
+      <span class="vote-name-label abstain">➖ Abstention</span>
+      <span>${e.votesAbstain.map(u => escapeHtml(names.get(u) || u)).join(", ")}</span>
+    </div>`);
 
   container.innerHTML = rows.join("");
 }
@@ -262,13 +283,21 @@ async function handleVote(e, direction) {
   if (direction === "against" && votesAgainst.includes(uid)) { showToast("Tu as déjà voté Contre.",      "error"); return; }
   if (direction === "abstain" && votesAbstain.includes(uid)) { showToast("Tu as déjà voté Abstention.", "error"); return; }
 
+  // Demander une raison avant de désactiver les boutons
+  let reason = "";
+  if (direction === "against") {
+    const result = await promptReason("👎 Voter Contre");
+    if (!result.ok) return;
+    reason = result.reason;
+  }
+
   const forBtn     = document.getElementById("vote-for-btn");
   const againstBtn = document.getElementById("vote-against-btn");
   const abstainBtn = document.getElementById("vote-abstain-btn");
   [forBtn, againstBtn, abstainBtn].forEach(b => b && (b.disabled = true));
 
   try {
-    entry = await voteEntry(e.id, direction, votesFor, votesAgainst, votesAbstain);
+    entry = await voteEntry(e.id, direction, votesFor, votesAgainst, votesAbstain, reason);
     const voteSection = document.getElementById("vote-section");
     if (voteSection) voteSection.outerHTML = renderVoteSection(entry);
     setupVoteButtons(entry);
