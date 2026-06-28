@@ -1,9 +1,10 @@
 import { db } from "./firebase-init.js";
 import { FIREBASE_CONFIG } from "../config.js";
 import { requireAuth, isAdmin, getCurrentUser } from "./auth.js";
-import { renderNavbar, showToast } from "./ui-shared.js";
+import { loadSettings, saveSettings, getVotesNeeded, invalidateSettingsCache } from "./settings.js";
+import { renderNavbar, showToast, confirmModal } from "./ui-shared.js";
 import {
-  collection, getDocs, setDoc, updateDoc, doc, serverTimestamp, query, orderBy
+  collection, getDocs, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -23,6 +24,7 @@ requireAuth(async () => {
 
   renderNavbar("admin");
   loadUsers();
+  await initConfig();
 
   document.getElementById("create-user-btn").addEventListener("click", () => {
     document.getElementById("create-panel").style.display = "";
@@ -36,7 +38,46 @@ requireAuth(async () => {
   });
 
   document.getElementById("confirm-create-btn").addEventListener("click", handleCreateUser);
+  document.getElementById("save-config-btn").addEventListener("click", handleSaveConfig);
+
+  const input = document.getElementById("referent-count-input");
+  input.addEventListener("input",  updateConfigDisplay);
+  document.getElementById("ref-increment").addEventListener("click", () => { input.value = Math.min(20, +input.value + 1); updateConfigDisplay(); });
+  document.getElementById("ref-decrement").addEventListener("click", () => { input.value = Math.max(1,  +input.value - 1); updateConfigDisplay(); });
 });
+
+// ── Configuration ─────────────────────────────────────────────
+
+async function initConfig() {
+  const settings = await loadSettings();
+  document.getElementById("referent-count-input").value = settings.referentCount;
+  updateConfigDisplay();
+}
+
+function updateConfigDisplay() {
+  const n        = Math.max(1, Math.min(20, +document.getElementById("referent-count-input").value || 5));
+  const needed   = Math.ceil(n / 2);
+  document.getElementById("votes-needed-display").textContent  = needed;
+  document.getElementById("votes-needed-formula").textContent  = `⌈${n}/2⌉ = ${needed}`;
+}
+
+async function handleSaveConfig() {
+  const n   = Math.max(1, Math.min(20, +document.getElementById("referent-count-input").value || 5));
+  const btn = document.getElementById("save-config-btn");
+  btn.disabled = true; btn.textContent = "Sauvegarde…";
+  try {
+    invalidateSettingsCache();
+    await saveSettings({ referentCount: n });
+    showToast(`Configuration sauvegardée — seuil : ${Math.ceil(n/2)}/${n} votes.`, "success");
+  } catch (err) {
+    showToast("Erreur lors de la sauvegarde.", "error");
+    console.error(err);
+  } finally {
+    btn.disabled = false; btn.textContent = "Sauvegarder";
+  }
+}
+
+// ── Utilisateurs ──────────────────────────────────────────────
 
 async function loadUsers() {
   try {
@@ -77,10 +118,29 @@ function renderUserList(users) {
             <option value="referent" ${u.role === "referent" ? "selected" : ""}>Référent</option>
             <option value="admin"    ${u.role === "admin"    ? "selected" : ""}>Admin</option>
           </select>
+          <button class="btn btn-danger btn-sm" style="padding:4px 10px;font-size:.78rem"
+            onclick="handleDeleteUser('${u.id}','${esc(u.displayName || u.email)}')">✕ Supprimer</button>
         ` : `<div style="width:90px"></div>`}
       </div>`;
   }).join("");
 }
+
+window.handleDeleteUser = async (uid, name) => {
+  const ok = await confirmModal(
+    "Supprimer le compte",
+    `Supprimer <strong>${name}</strong> ? Son accès sera immédiatement révoqué. Cette action est irréversible.`,
+    "Supprimer"
+  );
+  if (!ok) return;
+  try {
+    await deleteDoc(doc(db, "users", uid));
+    showToast(`Compte de ${name} supprimé.`, "success");
+    loadUsers();
+  } catch (err) {
+    showToast("Erreur lors de la suppression.", "error");
+    console.error(err);
+  }
+};
 
 window.handleRoleChange = async (select) => {
   const uid  = select.dataset.uid;

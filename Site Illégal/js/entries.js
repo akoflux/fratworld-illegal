@@ -1,6 +1,7 @@
 import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import { sendDiscordNotification } from "./discord.js";
+import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion, arrayRemove
@@ -111,6 +112,10 @@ export async function archiveEntry(id) {
   });
 }
 
+export async function markDeadlineReminderSent(id) {
+  await updateDoc(doc(db, "entries", id), { deadlineReminderSent: true });
+}
+
 export async function togglePin(id, currentlyPinned) {
   await updateDoc(doc(db, "entries", id), {
     pinned: !currentlyPinned,
@@ -139,14 +144,15 @@ export function subscribeEntries(callback) {
   });
 }
 
-const VOTES_NEEDED = 3;
-
 export async function voteEntry(id, direction, currentFor, currentAgainst, currentAbstain) {
   const { uid, name } = authorInfo();
 
   currentFor     = currentFor     || [];
   currentAgainst = currentAgainst || [];
   currentAbstain = currentAbstain || [];
+
+  const settings    = await loadSettings();
+  const VOTES_NEEDED = getVotesNeeded(settings);
 
   // Vérification deadline
   const snap0 = await getDoc(doc(db, "entries", id));

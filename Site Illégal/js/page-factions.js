@@ -93,7 +93,16 @@ function factionCard(f) {
             <div class="info-label">Business / Activité</div>
             <div class="info-value" style="color:var(--text-secondary);font-weight:400">${f.business || "—"}</div>
           </div>
+          ${f.notes ? `
           <div class="info-item" style="grid-column:1/-1">
+            <div class="info-label">Notes internes</div>
+            <div class="faction-notes">${f.notes}</div>
+          </div>` : ""}
+          <div class="info-item">
+            <div class="info-label">Dernier contact</div>
+            <div class="info-value" style="color:var(--text-secondary);font-size:.82rem">${f.dernierContact ? new Date(f.dernierContact).toLocaleDateString("fr-FR") : "—"}</div>
+          </div>
+          <div class="info-item">
             <div class="info-label">Mis à jour</div>
             <div class="info-value" style="color:var(--text-muted);font-size:.78rem">${formatDate(f.updatedAt)} par ${f.updatedBy || f.authorName || "—"}</div>
           </div>
@@ -111,12 +120,14 @@ function openModal(faction) {
   document.getElementById("modal-title").textContent     = faction ? "Modifier la faction" : "Nouvelle faction";
   document.getElementById("faction-submit").textContent  = faction ? "Enregistrer" : "Créer";
 
-  document.getElementById("f-nom").value      = faction?.nom      || "";
-  document.getElementById("f-type").value     = faction?.type     || "";
-  document.getElementById("f-statut").value   = faction?.statut   || "Actif";
-  document.getElementById("f-lead").value     = faction?.lead     || "";
-  document.getElementById("f-colead").value   = faction?.coLead   || "";
-  document.getElementById("f-business").value = faction?.business || "";
+  document.getElementById("f-nom").value              = faction?.nom             || "";
+  document.getElementById("f-type").value             = faction?.type            || "";
+  document.getElementById("f-statut").value           = faction?.statut          || "Actif";
+  document.getElementById("f-lead").value             = faction?.lead            || "";
+  document.getElementById("f-colead").value           = faction?.coLead          || "";
+  document.getElementById("f-business").value         = faction?.business        || "";
+  document.getElementById("f-notes").value            = faction?.notes           || "";
+  document.getElementById("f-dernier-contact").value  = faction?.dernierContact  || "";
 
   document.getElementById("faction-modal").style.display = "flex";
   document.getElementById("modal-overlay").style.display = "flex";
@@ -132,12 +143,14 @@ function closeModal() {
 async function handleSubmit(ev) {
   ev.preventDefault();
   const data = {
-    nom:      document.getElementById("f-nom").value,
-    type:     document.getElementById("f-type").value,
-    statut:   document.getElementById("f-statut").value,
-    lead:     document.getElementById("f-lead").value,
-    coLead:   document.getElementById("f-colead").value,
-    business: document.getElementById("f-business").value
+    nom:            document.getElementById("f-nom").value,
+    type:           document.getElementById("f-type").value,
+    statut:         document.getElementById("f-statut").value,
+    lead:           document.getElementById("f-lead").value,
+    coLead:         document.getElementById("f-colead").value,
+    business:       document.getElementById("f-business").value,
+    notes:          document.getElementById("f-notes").value,
+    dernierContact: document.getElementById("f-dernier-contact").value || null
   };
 
   if (!data.nom || !data.type) { showToast("Nom et type obligatoires.", "error"); return; }

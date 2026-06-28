@@ -1,11 +1,13 @@
-import { requireAuth, canEdit, isAdmin, getCurrentUser, getCurrentUserData } from "./auth.js";
+import { requireAuth, canEdit, isAdmin, getCurrentUser, getCurrentUserData, getUserNames } from "./auth.js";
 import { getEntry, getHistory, archiveEntry, voteEntry, togglePin } from "./entries.js";
+import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
   renderNavbar, showToast, confirmModal, formatDate,
   statusBadge, catBadge, factionBadges, normalizeFactions, getParam, showSpinner
 } from "./ui-shared.js";
 
-let entry = null;
+let entry    = null;
+let VOTES_NEEDED = 3;
 
 requireAuth(async () => {
   const section = getParam("section") || "decisions";
@@ -17,7 +19,9 @@ requireAuth(async () => {
   showSpinner("entry-main");
 
   try {
-    entry = await getEntry(id);
+    const [e, settings] = await Promise.all([getEntry(id), loadSettings()]);
+    VOTES_NEEDED = getVotesNeeded(settings);
+    entry = e;
     if (!entry) { window.location.href = "/entries.html"; return; }
     if (entry.section && entry.section !== section) renderNavbar(entry.section);
     renderEntry(entry);
@@ -132,7 +136,10 @@ function renderEntry(e) {
     </div>
   `;
 
-  if (isPropo) setupVoteButtons(e);
+  if (isPropo) {
+    setupVoteButtons(e);
+    loadVoteNames(e);
+  }
 }
 
 // ── Vote ──────────────────────────────────────────────────────
@@ -141,7 +148,6 @@ function renderVoteSection(e) {
   const votesFor     = e.votesFor     || [];
   const votesAgainst = e.votesAgainst || [];
   const votesAbstain = e.votesAbstain || [];
-  const VOTES_NEEDED = 3;
 
   const uid = getCurrentUser()?.uid;
   const hasVotedFor     = votesFor.includes(uid);
@@ -215,8 +221,27 @@ function renderVoteSection(e) {
             ? `${votesFor.length} pour · ${votesAgainst.length} contre · ${votesAbstain.length} abstention(s)`
             : "Aucun vote pour l'instant."}
         </div>
+        <div id="vote-names-section" class="vote-names-section"></div>
       </div>
     </div>`;
+}
+
+async function loadVoteNames(e) {
+  const container = document.getElementById("vote-names-section");
+  if (!container) return;
+  const allUids = [...(e.votesFor || []), ...(e.votesAgainst || []), ...(e.votesAbstain || [])];
+  if (!allUids.length) return;
+
+  const names = await getUserNames(allUids);
+  const rows = [];
+  if ((e.votesFor || []).length)
+    rows.push(`<div class="vote-name-row"><span class="vote-name-label for">👍 Pour</span><span>${(e.votesFor).map(u => escapeHtml(names.get(u) || u)).join(", ")}</span></div>`);
+  if ((e.votesAgainst || []).length)
+    rows.push(`<div class="vote-name-row"><span class="vote-name-label against">👎 Contre</span><span>${(e.votesAgainst).map(u => escapeHtml(names.get(u) || u)).join(", ")}</span></div>`);
+  if ((e.votesAbstain || []).length)
+    rows.push(`<div class="vote-name-row"><span class="vote-name-label abstain">➖ Abstention</span><span>${(e.votesAbstain).map(u => escapeHtml(names.get(u) || u)).join(", ")}</span></div>`);
+
+  container.innerHTML = rows.join("");
 }
 
 function setupVoteButtons(e) {
@@ -247,6 +272,7 @@ async function handleVote(e, direction) {
     const voteSection = document.getElementById("vote-section");
     if (voteSection) voteSection.outerHTML = renderVoteSection(entry);
     setupVoteButtons(entry);
+    loadVoteNames(entry);
     showToast("Vote enregistré.", "success");
   } catch (err) {
     showToast(err.message || "Erreur lors du vote.", "error");

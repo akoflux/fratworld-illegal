@@ -14,19 +14,21 @@ function authorInfo() {
 export async function createFaction(data) {
   const { uid, name } = authorInfo();
   return addDoc(collection(db, "factions"), {
-    nom:      data.nom.trim(),
-    type:     data.type,
-    statut:   data.statut || "Actif",
-    lead:     data.lead.trim(),
-    coLead:   data.coLead.trim(),
-    business: data.business.trim(),
-    actif:    true,
-    leadHistory: [],
-    authorUid:  uid,
-    authorName: name,
-    createdAt:  serverTimestamp(),
-    updatedAt:  serverTimestamp(),
-    updatedBy:  name
+    nom:            data.nom.trim(),
+    type:           data.type,
+    statut:         data.statut || "Actif",
+    lead:           data.lead.trim(),
+    coLead:         data.coLead.trim(),
+    business:       data.business.trim(),
+    notes:          data.notes?.trim() || "",
+    dernierContact: data.dernierContact || null,
+    actif:          true,
+    leadHistory:    [],
+    authorUid:      uid,
+    authorName:     name,
+    createdAt:      serverTimestamp(),
+    updatedAt:      serverTimestamp(),
+    updatedBy:      name
   });
 }
 
@@ -38,14 +40,16 @@ export async function updateFaction(id, data) {
   const old     = oldSnap.exists() ? oldSnap.data() : {};
 
   const update = {
-    nom:      data.nom.trim(),
-    type:     data.type,
-    statut:   data.statut || "Actif",
-    lead:     data.lead.trim(),
-    coLead:   data.coLead.trim(),
-    business: data.business.trim(),
-    updatedAt: serverTimestamp(),
-    updatedBy: name
+    nom:            data.nom.trim(),
+    type:           data.type,
+    statut:         data.statut || "Actif",
+    lead:           data.lead.trim(),
+    coLead:         data.coLead.trim(),
+    business:       data.business.trim(),
+    notes:          data.notes?.trim() || "",
+    dernierContact: data.dernierContact || null,
+    updatedAt:      serverTimestamp(),
+    updatedBy:      name
   };
 
   const leadChanged   = data.lead.trim()   !== (old.lead   || "");
@@ -87,6 +91,18 @@ export async function getFactionNames() {
     return snap.docs.map(d => d.data().nom);
   } catch (err) {
     console.warn("getFactionNames fallback:", err.message);
+    return [];
+  }
+}
+
+// Retourne [{id, nom, type}] pour les selects relation/agenda
+export async function getFactionList() {
+  try {
+    const q    = query(collection(db, "factions"), orderBy("nom", "asc"));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, nom: d.data().nom, type: d.data().type }));
+  } catch (err) {
+    console.warn("getFactionList fallback:", err.message);
     return [];
   }
 }

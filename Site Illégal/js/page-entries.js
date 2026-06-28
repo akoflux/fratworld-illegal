@@ -1,5 +1,6 @@
 import { requireAuth, canEdit } from "./auth.js";
 import { subscribeEntries, archiveEntry, togglePin } from "./entries.js";
+import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
   renderNavbar, showToast, confirmModal, formatDate,
   statusClass, statusBadge, catBadge, factionBadges, normalizeFactions, showSpinner
@@ -8,10 +9,11 @@ import {
 const SECTION_KEY  = new URLSearchParams(window.location.search).get("section") || "decisions";
 const SECTION_MAP  = { decisions: "Décisions", factions: "Factions", propositions: "Propositions & Dossiers" };
 
-let allEntries     = [];
-let viewMode       = localStorage.getItem("fw-view") || "cards";
-let showArchived   = false;
-let unsubscribe    = null;
+let allEntries   = [];
+let viewMode     = localStorage.getItem("fw-view") || "cards";
+let showArchived = false;
+let unsubscribe  = null;
+let VOTES_NEEDED = 3;
 
 requireAuth(async () => {
   renderNavbar(SECTION_KEY);
@@ -19,6 +21,9 @@ requireAuth(async () => {
   setupArchivedToggle();
   setSectionTab(SECTION_KEY);
   showSpinner("entries-container");
+
+  const settings = await loadSettings();
+  VOTES_NEEDED   = getVotesNeeded(settings);
 
   unsubscribe = subscribeEntries(entries => {
     allEntries = entries;
@@ -252,7 +257,6 @@ function renderTable(entries, container) {
 }
 
 function renderKanban(entries, container) {
-  const VOTES_NEEDED = 3;
   const cols = {
     pending: { label: "En cours", cls: "pending", entries: [] },
     valid:   { label: "Validé",   cls: "valid",   entries: [] },

@@ -1,13 +1,24 @@
 import { requireAuth, getCurrentUser, isAdmin } from "./auth.js";
-import { subscribeDossiers, createDossier, voteDossier, archiveDossier, deleteDossier, VOTES_NEEDED_COUNT } from "./dossiers.js";
+import { subscribeDossiers, createDossier, voteDossier, archiveDossier, deleteDossier } from "./dossiers.js";
+import { loadSettings, getVotesNeeded } from "./settings.js";
 import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.js";
 
-let allDossiers = [];
-let showArchived = false;
-let unsubscribe  = null;
+let allDossiers    = [];
+let showArchived   = false;
+let unsubscribe    = null;
+let VOTES_NEEDED_COUNT = 3;
 
-requireAuth(() => {
+requireAuth(async () => {
   renderNavbar("dossiers");
+
+  const settings     = await loadSettings();
+  VOTES_NEEDED_COUNT = getVotesNeeded(settings);
+
+  // Afficher le seuil dans le sous-titre
+  const threshEl  = document.getElementById("dossier-threshold");
+  const refCountEl = document.getElementById("dossier-ref-count");
+  if (threshEl)   threshEl.textContent   = VOTES_NEEDED_COUNT;
+  if (refCountEl) refCountEl.textContent = settings.referentCount;
 
   unsubscribe = subscribeDossiers(dossiers => {
     allDossiers = dossiers;

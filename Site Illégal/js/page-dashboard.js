@@ -1,17 +1,23 @@
 import { requireAuth } from "./auth.js";
-import { subscribeEntries } from "./entries.js";
-import { renderNavbar, formatDate, statusClass, statusBadge } from "./ui-shared.js";
+import { subscribeEntries, markDeadlineReminderSent } from "./entries.js";
+import { loadSettings, getVotesNeeded } from "./settings.js";
+import { sendDiscordNotification } from "./discord.js";
+import { renderNavbar, formatDate, statusClass, statusBadge, setDeadlineBadge } from "./ui-shared.js";
 
-let unsubscribe = null;
+let unsubscribe  = null;
+let VOTES_NEEDED = 3;
 
 requireAuth(async () => {
   renderNavbar("dashboard");
-  unsubscribe = subscribeEntries(entries => {
+  const settings = await loadSettings();
+  VOTES_NEEDED   = getVotesNeeded(settings);
+  unsubscribe    = subscribeEntries(entries => {
     renderStats(entries);
     renderBreakdown(entries);
     renderPinned(entries);
     renderVotes(entries);
     renderActivity(entries);
+    checkDeadlines(entries);
   });
   document.getElementById("new-entry-btn").addEventListener("click", () => {
     window.location.href = "/entry-form.html";
@@ -103,8 +109,6 @@ function renderPinned(entries) {
   }).join("");
 }
 
-const VOTES_NEEDED = 3;
-
 function renderVotes(entries) {
   const container = document.getElementById("votes-list");
   if (!container) return;
@@ -168,6 +172,36 @@ function renderVotes(entries) {
         </div>
       </div>`;
   }).join("");
+}
+
+// ── Deadlines ─────────────────────────────────────────────────
+
+const _sentThisSession = new Set();
+
+async function checkDeadlines(entries) {
+  const now    = new Date();
+  const h24    = 24 * 60 * 60 * 1000;
+  const urgent = entries.filter(e =>
+    e.section === "propositions" &&
+    e.status !== "Validé" && e.status !== "Refusé" &&
+    e.voteDeadline &&
+    !e.deadlineReminderSent &&
+    new Date(e.voteDeadline) > now &&
+    new Date(e.voteDeadline) - now <= h24
+  );
+
+  setDeadlineBadge(urgent.length);
+
+  for (const entry of urgent) {
+    if (_sentThisSession.has(entry.id)) continue;
+    _sentThisSession.add(entry.id);
+    try {
+      await sendDiscordNotification("deadline_reminder", entry);
+      await markDeadlineReminderSent(entry.id);
+    } catch (err) {
+      console.error("Deadline reminder error:", err);
+    }
+  }
 }
 
 function renderActivity(entries) {

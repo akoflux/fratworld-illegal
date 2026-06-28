@@ -79,5 +79,47 @@ service cloud.firestore {
                         resource.data.authorUid == request.auth.uid);
       allow delete: if isAdmin();
     }
+
+    // ── settings ───────────────────────────────────────────────
+    match /settings/{settingId} {
+      allow read:  if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── tasks ──────────────────────────────────────────────────
+    match /tasks/{taskId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
+
+    // ── agenda ─────────────────────────────────────────────────
+    match /agenda/{eventId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
+
+    // ── relations ──────────────────────────────────────────────
+    match /relations/{relationId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
   }
 }

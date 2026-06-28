@@ -8,6 +8,9 @@ const NAV_LINKS = [
   { href: "/factions.html",     label: "Factions",    key: "factions"   },
   { href: "/dossiers.html",     label: "Dossiers",    key: "dossiers"   },
   { href: "/entries.html?section=propositions", label: "Propositions", key: "propositions" },
+  { href: "/relations.html",    label: "Relations",   key: "relations"  },
+  { href: "/tasks.html",        label: "Tâches",      key: "tasks"      },
+  { href: "/agenda.html",       label: "Agenda",      key: "agenda"     },
   { href: "/documents.html",    label: "Documents",   key: "documents"  },
   { href: "/reglement.html",    label: "Règlement",   key: "reglement"  },
   { href: "/communique.html",   label: "Communiqué",  key: "communique" },
@@ -48,6 +51,7 @@ export function renderNavbar(activePage) {
 
       <div class="navbar-right">
         <button class="nav-search-btn" id="nav-search-btn" title="Rechercher">🔍</button>
+        <button class="nav-deadline-btn" id="nav-deadline-btn" title="Deadlines de vote" style="display:none">⏰<span id="nav-deadline-badge" class="deadline-badge"></span></button>
         <div class="user-info">
           <div class="user-avatar">${initials}</div>
           <span style="display:none" class="user-name-text">${name}</span>
@@ -71,6 +75,9 @@ export function renderNavbar(activePage) {
 
   document.getElementById("logout-btn").addEventListener("click", () => logout());
   document.getElementById("nav-search-btn").addEventListener("click", openSearch);
+  document.getElementById("nav-deadline-btn")?.addEventListener("click", () => {
+    window.location.href = "/agenda.html";
+  });
 
   // Créer l'overlay de recherche (une seule fois)
   if (!document.getElementById("fw-search-overlay")) initSearchOverlay();
@@ -200,6 +207,16 @@ function _hlSearch(str, q) {
 
 // Exposer closeSearch pour les liens href dans l'overlay
 window.closeSearch = closeSearch;
+
+// ── Deadline badge ────────────────────────────────────────────
+
+export function setDeadlineBadge(count) {
+  const btn   = document.getElementById("nav-deadline-btn");
+  const badge = document.getElementById("nav-deadline-badge");
+  if (!btn) return;
+  btn.style.display = count > 0 ? "" : "none";
+  if (badge) badge.textContent = count > 0 ? count : "";
+}
 
 // ── Toast notifications ───────────────────────────────────────
 

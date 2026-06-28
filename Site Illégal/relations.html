@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relations inter-factions — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+  <div id="navbar"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Relations inter-factions</h1>
+        <p class="page-subtitle" id="relation-count">Chargement…</p>
+      </div>
+      <button id="new-relation-btn" class="btn btn-primary">+ Nouvelle relation</button>
+    </div>
+
+    <!-- Filtres -->
+    <div class="toolbar" style="margin-bottom:20px">
+      <div class="toolbar-left">
+        <select id="filter-rel-type" class="filter-select">
+          <option value="">Tous types</option>
+          <option value="Alliance">Alliance</option>
+          <option value="Conflit">Conflit</option>
+          <option value="Neutralité">Neutralité</option>
+          <option value="Accord">Accord</option>
+        </select>
+        <select id="filter-rel-faction" class="filter-select">
+          <option value="">Toutes factions</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="relations-container">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal overlay -->
+<div id="rel-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500"></div>
+
+<!-- Modal ajout relation -->
+<div id="rel-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;width:100%;max-width:500px;padding:16px">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 id="rel-modal-title" style="margin-bottom:20px;font-size:1.05rem">Nouvelle relation</h2>
+    <form id="rel-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Faction A <span class="required">*</span></label>
+          <select id="r-faction1" class="form-control" required>
+            <option value="">— Sélectionner —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Faction B <span class="required">*</span></label>
+          <select id="r-faction2" class="form-control" required>
+            <option value="">— Sélectionner —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type de relation <span class="required">*</span></label>
+          <select id="r-type" class="form-control" required>
+            <option value="Alliance">Alliance</option>
+            <option value="Conflit">Conflit</option>
+            <option value="Neutralité">Neutralité</option>
+            <option value="Accord">Accord</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Depuis</label>
+          <input id="r-since" type="date" class="form-control" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description / Contexte</label>
+        <textarea id="r-desc" class="form-control" style="min-height:80px" placeholder="Détails sur cet accord, conflit…"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="rel-cancel-btn" class="btn btn-secondary">Annuler</button>
+        <button type="submit" id="rel-submit-btn" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/js/page-relations.js"></script>
+</body>
+</html>

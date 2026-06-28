@@ -19,8 +19,8 @@ const CAT_EMOJI = {
   "Historique débat staff":        "📜"
 };
 
-// type : "create" | "status_change" | "vote_result"
-// entry : { id, title, category, status, factions, authorName, votesFor, votesAgainst }
+// type : "create" | "status_change" | "vote_result" | "deadline_reminder"
+// entry : { id, title, category, status, factions, authorName, votesFor, votesAgainst, voteDeadline }
 export async function sendDiscordNotification(type, entry) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("VOTRE_WEBHOOK_ICI")) return;
 
@@ -35,7 +35,21 @@ export async function sendDiscordNotification(type, entry) {
 
   let title, description, fields;
 
-  if (type === "vote_result") {
+  if (type === "deadline_reminder") {
+    const dlStr = entry.voteDeadline
+      ? new Date(entry.voteDeadline).toLocaleDateString("fr-FR", {
+          day: "2-digit", month: "long", year: "numeric",
+          hour: "2-digit", minute: "2-digit"
+        }).replace(",", " à")
+      : "—";
+    title       = `⏰ Rappel — Vote à clôturer : ${entry.title}`;
+    description = `La deadline de vote approche (moins de 24 h) pour cette proposition.`;
+    fields = [
+      { name: "Catégorie",      value: entry.category || "—",  inline: true },
+      { name: "Deadline",       value: dlStr,                  inline: true },
+      { name: "Faction(s)",     value: factionVal,             inline: true }
+    ];
+  } else if (type === "vote_result") {
     const isValid = entry.status === "Validé";
     title       = `${isValid ? "✅" : "❌"} Proposition ${entry.status} — ${entry.title}`;
     description = `La proposition a été **${entry.status}** après vote du staff.`;

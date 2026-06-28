@@ -1,11 +1,10 @@
 import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
+import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const VOTES_NEEDED = 3;
 
 function authorInfo() {
   const user     = getCurrentUser();
@@ -34,13 +33,15 @@ export async function voteDossier(id, currentVotes) {
   const { uid } = authorInfo();
   if (currentVotes.includes(uid)) return; // déjà voté
 
-  const newVotes = [...currentVotes, uid];
-  const updates  = {
+  const settings    = await loadSettings();
+  const votesNeeded = getVotesNeeded(settings);
+  const newVotes    = [...currentVotes, uid];
+  const updates     = {
     votes:    arrayUnion(uid),
     updatedAt: serverTimestamp()
   };
 
-  if (newVotes.length >= VOTES_NEEDED) {
+  if (newVotes.length >= votesNeeded) {
     updates.statut = "En attente d'entretien";
   }
 
@@ -70,4 +71,3 @@ export function subscribeDossiers(callback) {
   });
 }
 
-export const VOTES_NEEDED_COUNT = VOTES_NEEDED;
