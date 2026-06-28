@@ -24,7 +24,7 @@ const FIREBASE_CONFIG = {
 };
 // ⚠️  Ce webhook est visible dans le code source côté client.
 // Régénère-le depuis Discord si tu penses qu'il a été compromis.
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1519340005091311800/j8kKMx12KKgI40C7atPnAzTh1Tog0jVmVMy1WWG8-dovV76GrB031pH8Vlm8fDmHMIot";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1520789790226911322/QC1otPkcZa-xudbKj1h7iNztPSX3oslYKE_6po4I3G-vUXev_FPSoilyvxOP6b7ciPUS";
 
 // URL publique du site (utilisée pour les liens dans les messages Discord).
 // Ex: "https://fratworld-staff.netlify.app"
