@@ -1,4 +1,4 @@
-import { requireAuth, canEdit } from "./auth.js";
+import { requireAuth, canEdit, isSpectateur } from "./auth.js";
 import { getEntry, getEntries, createEntry, updateEntry } from "./entries.js";
 import { getFactionNames } from "./factions-list.js";
 import { renderNavbar, showToast, getParam, normalizeFactions } from "./ui-shared.js";
@@ -19,6 +19,8 @@ const CATS_BY_SECTION = {
 const FACTIONS_FALLBACK = ["Cartel", "Mafia", "MC / Groupe atypique", "Gang", "Indépendant", "Toutes"];
 
 requireAuth(async () => {
+  if (isSpectateur()) { window.location.href = "/entries.html"; return; }
+
   renderNavbar(SECTION_PARAM);
 
   entryId  = getParam("id");

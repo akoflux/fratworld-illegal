@@ -1,4 +1,4 @@
-import { requireAuth, getCurrentUser, isAdmin } from "./auth.js";
+import { requireAuth, getCurrentUser, isAdmin, isSpectateur } from "./auth.js";
 import { subscribeDossiers, createDossier, voteDossier, archiveDossier, deleteDossier } from "./dossiers.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.js";
@@ -24,6 +24,10 @@ requireAuth(async () => {
     allDossiers = dossiers;
     renderDossiers();
   });
+
+  if (isSpectateur()) {
+    document.getElementById("new-dossier-btn").style.display = "none";
+  }
 
   document.getElementById("new-dossier-btn").addEventListener("click", () => {
     document.getElementById("dossier-modal").classList.add("open");
@@ -115,7 +119,7 @@ function dossierCard(d, isArchive) {
           <div class="vote-bar-wrap">
             <div class="vote-bar-fill ${done ? "done" : ""}" style="width:${pct}%"></div>
           </div>
-          ${!done && !hasVoted ? `
+          ${!done && !hasVoted && !isSpectateur() ? `
             <button class="btn btn-primary btn-sm" onclick="handleVote('${d.id}')">
               Voter pour
             </button>` : ""}

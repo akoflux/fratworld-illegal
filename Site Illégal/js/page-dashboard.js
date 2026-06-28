@@ -1,4 +1,4 @@
-import { requireAuth } from "./auth.js";
+import { requireAuth, isSpectateur } from "./auth.js";
 import { subscribeEntries, markDeadlineReminderSent } from "./entries.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import { sendDiscordNotification } from "./discord.js";
@@ -19,9 +19,14 @@ requireAuth(async () => {
     renderActivity(entries);
     checkDeadlines(entries);
   });
-  document.getElementById("new-entry-btn").addEventListener("click", () => {
-    window.location.href = "/entry-form.html";
-  });
+  if (isSpectateur()) {
+    const btn = document.getElementById("new-entry-btn");
+    if (btn) btn.style.display = "none";
+  } else {
+    document.getElementById("new-entry-btn").addEventListener("click", () => {
+      window.location.href = "/entry-form.html";
+    });
+  }
 });
 
 window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); });

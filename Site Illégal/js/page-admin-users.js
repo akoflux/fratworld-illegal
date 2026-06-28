@@ -115,8 +115,9 @@ function renderUserList(users) {
         <span class="role-badge ${u.role}">${u.role || "?"}</span>
         ${!isMe ? `
           <select class="user-role-select" data-uid="${u.id}" onchange="handleRoleChange(this)">
-            <option value="referent" ${u.role === "referent" ? "selected" : ""}>Référent</option>
-            <option value="admin"    ${u.role === "admin"    ? "selected" : ""}>Admin</option>
+            <option value="referent"   ${u.role === "referent"   ? "selected" : ""}>Référent</option>
+            <option value="spectateur" ${u.role === "spectateur" ? "selected" : ""}>Spectateur</option>
+            <option value="admin"      ${u.role === "admin"      ? "selected" : ""}>Admin</option>
           </select>
           <button class="btn btn-danger btn-sm" style="padding:4px 10px;font-size:.78rem"
             onclick="handleDeleteUser('${u.id}','${esc(u.displayName || u.email)}')">✕ Supprimer</button>

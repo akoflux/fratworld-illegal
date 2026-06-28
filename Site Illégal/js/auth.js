@@ -51,10 +51,15 @@ export function requireAuth(callback) {
 export function getCurrentUser()     { return _currentUser; }
 export function getCurrentUserData() { return _currentUserData; }
 export function isAdmin()            { return _currentUserData?.role === "admin"; }
+export function isSpectateur()       { return _currentUserData?.role === "spectateur"; }
+export function isReferentOrAdmin()  { return _currentUserData?.role === "referent" || _currentUserData?.role === "admin"; }
 
-// Peut modifier/supprimer : admin OU auteur de l'entrée.
+// Peut créer/modifier/supprimer : référent ou admin (jamais spectateur).
+export function canCreate()          { return isReferentOrAdmin(); }
+
+// Peut modifier/supprimer une entrée spécifique : admin OU auteur — jamais spectateur.
 export function canEdit(entry) {
-  if (!_currentUser) return false;
+  if (!_currentUser || isSpectateur()) return false;
   return isAdmin() || _currentUser.uid === entry.authorUid;
 }
 

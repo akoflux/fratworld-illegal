@@ -1,4 +1,4 @@
-import { requireAuth, isAdmin } from "./auth.js";
+import { requireAuth, isAdmin, isSpectateur } from "./auth.js";
 import { subscribeFactions, createFaction, updateFaction, deleteFaction } from "./factions-list.js";
 import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.js";
 
@@ -27,6 +27,10 @@ requireAuth(() => {
     allFactions = factions;
     renderFactions();
   });
+
+  if (isSpectateur()) {
+    document.getElementById("new-faction-btn").style.display = "none";
+  }
 
   document.getElementById("new-faction-btn").addEventListener("click", () => openModal(null));
   document.getElementById("faction-form-cancel").addEventListener("click", closeModal);
@@ -75,7 +79,7 @@ function factionCard(f) {
         </div>
         <div style="display:flex;gap:6px">
           ${hasHistory ? `<button class="btn-icon" title="Historique leads" onclick="showLeadHistory('${f.id}')">📋</button>` : ""}
-          <button class="btn-icon" title="Modifier" onclick="openEditModal('${f.id}')">✎</button>
+          ${!isSpectateur() ? `<button class="btn-icon" title="Modifier" onclick="openEditModal('${f.id}')">✎</button>` : ""}
           ${admin ? `<button class="btn-icon danger" title="Supprimer" onclick="handleDeleteFaction('${f.id}','${esc(f.nom)}')">✕</button>` : ""}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { requireAuth, isAdmin, getCurrentUser } from "./auth.js";
+import { requireAuth, isAdmin, isSpectateur, getCurrentUser } from "./auth.js";
 import { createMarker, deleteMarker, subscribeMarkers } from "./markers.js";
 import { renderNavbar, showToast, confirmModal, escapeHtml } from "./ui-shared.js";
 
@@ -39,6 +39,10 @@ requireAuth(() => {
     document.getElementById("marker-count").textContent =
       `${markers.length} marqueur${markers.length !== 1 ? "s" : ""}`;
   });
+
+  if (isSpectateur()) {
+    document.getElementById("btn-place").style.display = "none";
+  }
 
   document.getElementById("btn-view").addEventListener("click",  () => setMode(false));
   document.getElementById("btn-place").addEventListener("click", () => setMode(true));

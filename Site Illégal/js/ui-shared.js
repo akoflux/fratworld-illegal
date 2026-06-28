@@ -25,6 +25,8 @@ export function renderNavbar(activePage) {
   const initials  = name.slice(0, 2).toUpperCase();
   const adminUser = role === "admin";
 
+  document.body.dataset.role = role;
+
   const visibleLinks = NAV_LINKS.filter(l => !l.adminOnly || adminUser);
 
   const linksHtml       = visibleLinks.map(l => `

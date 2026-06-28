@@ -229,8 +229,9 @@ h3 { font-size: 1.05rem; font-weight: 600; }
   text-transform: uppercase;
 }
 
-.role-badge.admin   { background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
-.role-badge.referent{ background: var(--accent-dim);   color: var(--accent); border: 1px solid rgba(249,115,22,.3); }
+.role-badge.admin      { background: rgba(239,68,68,.15);  color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
+.role-badge.referent   { background: var(--accent-dim);    color: var(--accent); border: 1px solid rgba(249,115,22,.3); }
+.role-badge.spectateur { background: rgba(99,102,241,.15); color: #818cf8; border: 1px solid rgba(99,102,241,.3); }
 
 /* ── Hamburger mobile ─────────────────────────────────────── */
 .nav-hamburger {

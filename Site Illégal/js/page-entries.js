@@ -1,4 +1,4 @@
-import { requireAuth, canEdit } from "./auth.js";
+import { requireAuth, canEdit, isSpectateur } from "./auth.js";
 import { subscribeEntries, archiveEntry, togglePin } from "./entries.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
@@ -29,6 +29,11 @@ requireAuth(async () => {
     allEntries = entries;
     renderEntries();
   });
+
+  if (isSpectateur()) {
+    const btn = document.getElementById("new-entry-btn");
+    if (btn) btn.style.display = "none";
+  }
 });
 
 window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); });

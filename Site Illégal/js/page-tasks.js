@@ -1,4 +1,4 @@
-import { requireAuth, isAdmin, getCurrentUser } from "./auth.js";
+import { requireAuth, isAdmin, isSpectateur, getCurrentUser } from "./auth.js";
 import { createTask, updateTaskStatus, deleteTask, subscribeTasks } from "./tasks.js";
 import { renderNavbar, showToast, confirmModal, formatDateShort, escapeHtml } from "./ui-shared.js";
 import {
@@ -34,6 +34,9 @@ requireAuth(async () => {
       `${tasks.length} tâche${tasks.length !== 1 ? "s" : ""}`;
   });
 
+  if (isSpectateur()) {
+    document.getElementById("new-task-btn").style.display = "none";
+  }
   document.getElementById("new-task-btn").addEventListener("click", openModal);
   document.getElementById("task-cancel-btn").addEventListener("click", closeModal);
   document.getElementById("task-modal-overlay").addEventListener("click", closeModal);
@@ -82,7 +85,8 @@ function taskCard(t) {
   const due  = t.dueDate ? formatDateShort(t.dueDate) : null;
   const overdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "termine";
 
-  const moveOpts = COLUMNS.filter(c => c.key !== t.status)
+  const spectateur = isSpectateur();
+  const moveOpts = spectateur ? "" : COLUMNS.filter(c => c.key !== t.status)
     .map(c => `<button class="task-move-btn" onclick="moveTask('${t.id}','${c.key}')">${c.label}</button>`)
     .join("");
 
@@ -98,10 +102,11 @@ function taskCard(t) {
         <span>👤 ${escapeHtml(t.assignedToName || "Tous")}</span>
         <span style="color:var(--text-muted)">par ${escapeHtml(t.authorName)}</span>
       </div>
+      ${!spectateur ? `
       <div class="kanban-card-actions">
         <div class="task-move-group">${moveOpts}</div>
         ${(admin || mine) ? `<button class="btn-icon danger" title="Supprimer" onclick="deleteTaskCard('${t.id}','${escapeHtml(t.title).replace(/'/g,"\\'")}')">✕</button>` : ""}
-      </div>
+      </div>` : ""}
     </div>`;
 }
 

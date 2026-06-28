@@ -1,4 +1,4 @@
-import { requireAuth, canEdit, isAdmin, getCurrentUser, getCurrentUserData, getUserNames } from "./auth.js";
+import { requireAuth, canEdit, isAdmin, isSpectateur, getCurrentUser, getCurrentUserData, getUserNames } from "./auth.js";
 import { getEntry, getHistory, archiveEntry, voteEntry, togglePin } from "./entries.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import {
@@ -173,7 +173,7 @@ function renderVoteSection(e) {
   const pctFor     = Math.min(100, Math.round((votesFor.length     / VOTES_NEEDED) * 100));
   const pctAgainst = Math.min(100, Math.round((votesAgainst.length / VOTES_NEEDED) * 100));
   const pctAbstain = votesAbstain.length;
-  const canVote    = !isClosed && !deadlineExpired;
+  const canVote    = !isClosed && !deadlineExpired && !isSpectateur();
 
   return `
     <div class="detail-card vote-card" id="vote-section">

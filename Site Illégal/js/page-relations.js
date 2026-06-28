@@ -1,4 +1,4 @@
-import { requireAuth, isAdmin, getCurrentUser } from "./auth.js";
+import { requireAuth, isAdmin, isSpectateur, getCurrentUser } from "./auth.js";
 import { createRelation, deleteRelation, subscribeRelations } from "./relations.js";
 import { getFactionList } from "./factions-list.js";
 import { renderNavbar, showToast, confirmModal, formatDateShort, escapeHtml } from "./ui-shared.js";
@@ -27,6 +27,9 @@ requireAuth(async () => {
     updateCount();
   });
 
+  if (isSpectateur()) {
+    document.getElementById("new-relation-btn").style.display = "none";
+  }
   document.getElementById("new-relation-btn").addEventListener("click", openModal);
   document.getElementById("rel-cancel-btn").addEventListener("click", closeModal);
   document.getElementById("rel-modal-overlay").addEventListener("click", closeModal);
