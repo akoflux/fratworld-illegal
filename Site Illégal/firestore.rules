@@ -25,12 +25,19 @@ service cloud.firestore {
     }
 
     // ── entries ────────────────────────────────────────────────
+    function isVoteUpdate() {
+      // Seuls les champs de vote peuvent être modifiés par n'importe quel référent
+      return request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['votesFor', 'votesAgainst', 'votesAbstain',
+                       'votesAgainstReasons', 'updatedAt', 'status', 'deadlineReminderSent']);
+    }
+
     match /entries/{entryId} {
       allow read:   if isAuthenticated();
       allow create: if isReferentOrAdmin();
       allow update: if isAdmin() ||
-                       (isReferentOrAdmin() &&
-                        resource.data.authorUid == request.auth.uid);
+                       (isReferentOrAdmin() && resource.data.authorUid == request.auth.uid) ||
+                       (isReferentOrAdmin() && isVoteUpdate());
       allow delete: if isAdmin() ||
                        (isReferentOrAdmin() &&
                         resource.data.authorUid == request.auth.uid);
