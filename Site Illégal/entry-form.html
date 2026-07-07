@@ -67,6 +67,13 @@
             <input type="datetime-local" id="vote-deadline" class="form-control" />
             <span class="form-hint">Optionnel. Le vote sera clôturé automatiquement après cette date.</span>
           </div>
+
+          <!-- Document joint — visible uniquement pour propositions -->
+          <div class="form-group" id="document-url-group" style="display:none">
+            <label for="document-url">Document joint <span style="color:var(--text-muted);font-weight:400">(optionnel)</span></label>
+            <input type="url" id="document-url" class="form-control" placeholder="https://docs.google.com/…" />
+            <span class="form-hint">Lien vers un document complémentaire (Google Doc, PDF, Notion…).</span>
+          </div>
         </div>
 
         <div class="form-section">

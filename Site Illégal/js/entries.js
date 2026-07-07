@@ -36,6 +36,7 @@ export async function createEntry(data) {
     replaces:        data.replaces      || null,
     replacesTitle:   data.replacesTitle || null,
     voteDeadline:    data.voteDeadline  || null,
+    documentUrl:     data.documentUrl   || null,
     authorUid:  uid,
     authorName: name,
     createdAt:  serverTimestamp(),
@@ -78,6 +79,7 @@ export async function updateEntry(id, data, original) {
     replaces:      data.replaces      || null,
     replacesTitle: data.replacesTitle || null,
     voteDeadline:  data.voteDeadline  || null,
+    documentUrl:   data.documentUrl   || null,
     updatedAt:     serverTimestamp()
   };
 

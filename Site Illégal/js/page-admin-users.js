@@ -119,6 +119,15 @@ function renderUserList(users) {
             <option value="spectateur" ${u.role === "spectateur" ? "selected" : ""}>Spectateur</option>
             <option value="admin"      ${u.role === "admin"      ? "selected" : ""}>Admin</option>
           </select>
+          <select class="user-role-select" data-uid="${u.id}" onchange="handlePosteChange(this)"
+                  style="min-width:190px;font-size:.75rem">
+            <option value=""                          ${!u.poste ? "selected" : ""}>— Aucun poste —</option>
+            <option value="Responsable"               ${u.poste === "Responsable"               ? "selected" : ""}>Responsable</option>
+            <option value="Co-Responsable"            ${u.poste === "Co-Responsable"            ? "selected" : ""}>Co-Responsable</option>
+            <option value="Gestionnaire Mafia/Cartel" ${u.poste === "Gestionnaire Mafia/Cartel" ? "selected" : ""}>Gest. Mafia/Cartel</option>
+            <option value="Gestionnaire Groupe Atypique" ${u.poste === "Gestionnaire Groupe Atypique" ? "selected" : ""}>Gest. Atypique</option>
+            <option value="Gestionnaire Gang"         ${u.poste === "Gestionnaire Gang"         ? "selected" : ""}>Gest. Gang</option>
+          </select>
           <button class="btn btn-danger btn-sm" style="padding:4px 10px;font-size:.78rem"
             onclick="handleDeleteUser('${u.id}','${esc(u.displayName || u.email)}')">✕ Supprimer</button>
         ` : `<div style="width:90px"></div>`}
@@ -139,6 +148,19 @@ window.handleDeleteUser = async (uid, name) => {
     loadUsers();
   } catch (err) {
     showToast("Erreur lors de la suppression.", "error");
+    console.error(err);
+  }
+};
+
+window.handlePosteChange = async (select) => {
+  const uid   = select.dataset.uid;
+  const poste = select.value;
+  try {
+    await updateDoc(doc(db, "users", uid), { poste: poste || null });
+    showToast("Poste mis à jour.", "success");
+    loadUsers();
+  } catch (err) {
+    showToast("Erreur lors du changement de poste.", "error");
     console.error(err);
   }
 };

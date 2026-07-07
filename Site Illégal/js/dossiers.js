@@ -5,7 +5,7 @@ import { sendDossierNotification } from "./discord.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, query, orderBy, onSnapshot, serverTimestamp,
-  arrayUnion, arrayRemove, deleteField
+  arrayUnion, arrayRemove, deleteField, getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -24,12 +24,14 @@ export async function createDossier(data) {
     typeGroupe:          data.typeGroupe,
     lienDossier:         data.lienDossier.trim(),
     description:         data.description?.trim() || "",
+    contactName:         data.contactName?.trim()  || "",
+    contactDiscord:      data.contactDiscord?.trim() || "",
     votes:               [],       // legacy field — conservé pour compat
     votesFor:            [],
     votesAgainst:        [],
     votesAgainstReasons: {},
     voteDeadline:        data.voteDeadline || null,
-    statut:              "En cours",
+    statut:              "En attente d'étude",
     archived:            false,
     authorUid:           uid,
     authorName:          name,
@@ -93,6 +95,7 @@ export async function voteDossier(id, dossier, direction, reason = "") {
 
   if (thresholdJustReached) updates.statut = "En attente d'entretien";
 
+
   await updateDoc(doc(db, "dossiers", id), updates);
 
   if (thresholdJustReached) {
@@ -109,24 +112,75 @@ export async function voteDossier(id, dossier, direction, reason = "") {
   }
 }
 
-export async function archiveDossier(id, dossier, decision) {
+// Valider l'entretien → En attente d'installation
+export async function validerEntretien(id) {
+  await updateDoc(doc(db, "dossiers", id), {
+    statut:    "En attente d'installation",
+    updatedAt: serverTimestamp()
+  });
+}
+
+// Valider l'installation → Faction créée + création automatique de la faction
+export async function validerInstallation(id, dossier) {
+  const { uid, name } = authorInfo();
+
+  // Créer la faction dans Firestore
+  const factionRef = await addDoc(collection(db, "factions"), {
+    nom:            dossier.nomGroupe,
+    type:           dossier.typeGroupe,
+    statut:         "Actif",
+    lead:           dossier.contactName || "",
+    coLead:         "",
+    business:       "",
+    notes:          `Faction créée depuis dossier de candidature.`,
+    dernierContact: null,
+    actif:          true,
+    leadHistory:    [],
+    authorUid:      uid,
+    authorName:     name,
+    createdAt:      serverTimestamp(),
+    updatedAt:      serverTimestamp(),
+    updatedBy:      name
+  });
+
+  await updateDoc(doc(db, "dossiers", id), {
+    statut:     "Faction créée",
+    archived:   true,
+    archivedAt: serverTimestamp(),
+    archivedBy: name,
+    factionId:  factionRef.id,
+    updatedAt:  serverTimestamp()
+  });
+
+  const settings    = await loadSettings();
+  const votesNeeded = getVotesNeeded(settings);
+  await sendDossierNotification("dossier_archive", { id, ...dossier, statut: "Faction créée" }, votesNeeded);
+
+  return factionRef.id;
+}
+
+// Refuser un dossier à n'importe quelle étape
+export async function refuserDossier(id, dossier, reason) {
   const { name } = authorInfo();
   const settings    = await loadSettings();
   const votesNeeded = getVotesNeeded(settings);
 
   await updateDoc(doc(db, "dossiers", id), {
-    statut:     decision, // "Validé" | "Refusé"
-    archived:   true,
-    archivedAt: serverTimestamp(),
-    archivedBy: name,
-    updatedAt:  serverTimestamp()
+    statut:        "Refusé",
+    archived:      true,
+    archivedAt:    serverTimestamp(),
+    archivedBy:    name,
+    refusalReason: reason || "",
+    updatedAt:     serverTimestamp()
   });
 
-  await sendDossierNotification(
-    "dossier_archive",
-    { id, ...dossier, statut: decision },
-    votesNeeded
-  );
+  await sendDossierNotification("dossier_archive", { id, ...dossier, statut: "Refusé" }, votesNeeded);
+}
+
+// Legacy — conservé pour compat éventuelle
+export async function archiveDossier(id, dossier, decision) {
+  if (decision === "Refusé") return refuserDossier(id, dossier, "");
+  return validerInstallation(id, dossier);
 }
 
 export async function deleteDossier(id) {

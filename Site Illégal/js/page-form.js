@@ -68,8 +68,11 @@ requireAuth(async () => {
 });
 
 function toggleDeadlineField(section) {
-  const group = document.getElementById("deadline-group");
-  if (group) group.style.display = section === "propositions" ? "" : "none";
+  const isPropo = section === "propositions";
+  const group   = document.getElementById("deadline-group");
+  const docGrp  = document.getElementById("document-url-group");
+  if (group)  group.style.display  = isPropo ? "" : "none";
+  if (docGrp) docGrp.style.display = isPropo ? "" : "none";
 }
 
 function buildCategorySelect(section) {
@@ -109,6 +112,10 @@ function prefillForm(e) {
     const dlField = document.getElementById("vote-deadline");
     if (dlField) dlField.value = e.voteDeadline;
   }
+  if (e.documentUrl) {
+    const docField = document.getElementById("document-url");
+    if (docField) docField.value = e.documentUrl;
+  }
 
   if (e.category) {
     const opt = document.querySelector(`#category option[value="${e.category}"]`);
@@ -134,6 +141,9 @@ async function handleSubmit(ev) {
   const voteDeadline = section === "propositions"
     ? (document.getElementById("vote-deadline")?.value || null)
     : null;
+  const documentUrl = section === "propositions"
+    ? (document.getElementById("document-url")?.value?.trim() || null)
+    : null;
 
   if (!title)    { showToast("Le titre est requis.", "error"); return; }
   if (!category) { showToast("La catégorie est requise.", "error"); return; }
@@ -146,7 +156,7 @@ async function handleSubmit(ev) {
   btn.disabled = true;
   btn.textContent = "Enregistrement…";
 
-  const data = { title, section, category, status, description, factions, replaces: replacesId, replacesTitle, voteDeadline };
+  const data = { title, section, category, status, description, factions, replaces: replacesId, replacesTitle, voteDeadline, documentUrl };
 
   try {
     if (editMode) {

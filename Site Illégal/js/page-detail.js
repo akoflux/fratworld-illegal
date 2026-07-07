@@ -126,6 +126,17 @@ function renderEntry(e) {
       </div>
     </div>
 
+    ${isPropo && e.documentUrl ? `
+      <div class="detail-card">
+        <div class="card-header-bar"><h3>Document joint</h3></div>
+        <div class="card-content" style="padding:14px 18px">
+          <a href="${e.documentUrl}" target="_blank" rel="noopener" class="btn btn-secondary" style="width:fit-content">
+            📎 Consulter le document
+          </a>
+        </div>
+      </div>
+    ` : ""}
+
     ${isPropo ? renderVoteSection(e) : ""}
 
     <div class="detail-card print-hidden" id="history-card">

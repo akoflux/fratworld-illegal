@@ -9,16 +9,18 @@ const NAV_LINKS = [
     children: [
       { href: "/entries.html",                      label: "Décisions",    key: "decisions"    },
       { href: "/entries.html?section=propositions", label: "Propositions", key: "propositions" },
-      { href: "/dossiers.html",                     label: "Dossiers",     key: "dossiers"     }
+      { href: "/dossiers.html",                     label: "Dossiers",     key: "dossiers"     },
+      { href: "/archives.html",                     label: "Archives",     key: "archives"     }
     ]
   },
   {
     group: "Organisation", key: "g-org",
     children: [
-      { href: "/factions.html",  label: "Factions",  key: "factions"  },
-      { href: "/relations.html", label: "Relations",  key: "relations" },
-      { href: "/tasks.html",     label: "Tâches",     key: "tasks"     },
-      { href: "/agenda.html",    label: "Agenda",     key: "agenda"    }
+      { href: "/factions.html",      label: "Factions",      key: "factions"      },
+      { href: "/organigramme.html",  label: "Organigramme",  key: "organigramme"  },
+      { href: "/relations.html",     label: "Relations",      key: "relations"     },
+      { href: "/tasks.html",         label: "Tâches",         key: "tasks"         },
+      { href: "/agenda.html",        label: "Agenda",         key: "agenda"        }
     ]
   },
   {
