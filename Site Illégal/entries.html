@@ -88,6 +88,23 @@
 
   </main>
 </div>
+<!-- Viewer document inline -->
+<div id="doc-viewer-modal" style="display:none;position:fixed;inset:0;z-index:700;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+    background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:.85rem;font-weight:700;color:var(--text-primary)">📎 Aperçu du document</span>
+      <span id="doc-viewer-title" style="font-size:.78rem;color:var(--text-muted)"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a id="doc-viewer-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">↗ Ouvrir dans un nouvel onglet</a>
+      <button class="btn-icon" onclick="closeDocViewer()" title="Fermer">✕</button>
+    </div>
+  </div>
+  <iframe id="doc-viewer-iframe" src="" allow="autoplay"
+    style="flex:1;border:none;background:#fff;width:100%"></iframe>
+</div>
+
 <script type="module" src="/js/page-entries.js"></script>
 </body>
 </html>

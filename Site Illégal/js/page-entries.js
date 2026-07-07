@@ -206,6 +206,10 @@ function renderCards(entries, container) {
             ${SECTION_KEY === "propositions" ? `<span>·</span><span style="color:#22c55e">👍${(e.votesFor||[]).length}</span><span style="color:#ef4444">👎${(e.votesAgainst||[]).length}</span>` : ""}
           </div>
           <div class="card-actions" onclick="event.stopPropagation()">
+            ${e.documentUrl ? `
+              <button class="btn-icon" title="Voir le document" style="color:var(--accent,#c0392b)"
+                onclick="event.stopPropagation();openDocViewer('${e.id}')">📎</button>
+            ` : ""}
             ${canEdit(e) ? `
               <button class="pin-btn ${e.pinned ? "pinned" : ""}" title="${e.pinned ? "Désépingler" : "Épingler"}"
                 onclick="event.stopPropagation();handlePin('${e.id}',${!!e.pinned})">📌</button>
@@ -237,6 +241,10 @@ function renderTable(entries, container) {
         <td style="color:var(--text-secondary);font-size:.8rem">${e.authorName}</td>
         <td style="color:var(--text-muted);font-size:.78rem;white-space:nowrap">${formatDate(e.createdAt)}</td>
         <td class="table-actions" onclick="event.stopPropagation()">
+          ${e.documentUrl ? `
+            <button class="btn-icon" title="Voir le document" style="color:var(--accent,#c0392b)"
+              onclick="openDocViewer('${e.id}')">📎</button>
+          ` : ""}
           ${canEdit(e) ? `
             <button class="pin-btn ${e.pinned ? "pinned" : ""}" title="${e.pinned ? "Désépingler" : "Épingler"}"
               onclick="handlePin('${e.id}',${!!e.pinned})">📌</button>
@@ -287,6 +295,8 @@ function renderKanban(entries, container) {
           <div class="kanban-card-meta">
             ${catBadge(e.category)}
             <span>· ${e.authorName}</span>
+            ${e.documentUrl ? `<button class="btn-icon" title="Voir le document" style="color:var(--accent,#c0392b);font-size:.8rem;padding:0 2px"
+              onclick="event.stopPropagation();openDocViewer('${e.id}')">📎</button>` : ""}
           </div>
           ${isPropo ? `
             <div class="kanban-vote-row">
@@ -338,6 +348,53 @@ window.handleDelete = async (id, title) => {
     console.error(err);
   }
 };
+
+// ── Viewer document ───────────────────────────────────────────
+
+function toEmbedUrl(url) {
+  if (!url) return "";
+  try {
+    const u = new URL(url);
+    // Google Docs / Sheets / Slides / Forms
+    if (u.hostname === "docs.google.com") {
+      return url.replace(/\/(edit|view|pub|htmlview|copy)(\?.*)?$/, "/preview");
+    }
+  } catch (_) {}
+  return url;
+}
+
+window.openDocViewer = function(id) {
+  const entry = allEntries.find(e => e.id === id);
+  if (!entry?.documentUrl) return;
+
+  const modal  = document.getElementById("doc-viewer-modal");
+  const iframe = document.getElementById("doc-viewer-iframe");
+  const link   = document.getElementById("doc-viewer-link");
+  const title  = document.getElementById("doc-viewer-title");
+  if (!modal || !iframe) return;
+
+  iframe.src        = toEmbedUrl(entry.documentUrl);
+  if (link)  link.href        = entry.documentUrl;
+  if (title) title.textContent = entry.title || "";
+  modal.style.display = "flex";
+
+  // Fermer sur Escape
+  document.addEventListener("keydown", _escClose);
+};
+
+window.closeDocViewer = function() {
+  const modal  = document.getElementById("doc-viewer-modal");
+  const iframe = document.getElementById("doc-viewer-iframe");
+  if (modal)  modal.style.display = "none";
+  if (iframe) iframe.src = "";
+  document.removeEventListener("keydown", _escClose);
+};
+
+function _escClose(e) {
+  if (e.key === "Escape") window.closeDocViewer();
+}
+
+// ── Utils ─────────────────────────────────────────────────────
 
 function esc(str) {
   return String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
