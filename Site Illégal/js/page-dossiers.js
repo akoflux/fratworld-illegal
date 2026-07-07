@@ -138,7 +138,8 @@ function dossierCard(d, isArchive) {
     : "";
 
   // Boutons de vote (seulement pour "En attente d'étude")
-  const canVote = !isArchive && !deadlineExpired && !isSpectateur() && statut === "En attente d'étude";
+  const canVote = !isArchive && !deadlineExpired && !isSpectateur()
+    && (statut === "En attente d'étude" || statut === "En cours");
   let voteButtonsHtml = "";
   if (canVote) {
     if (!hasVoted) {
@@ -375,7 +376,7 @@ function manualControlHtml(id, currentStatut) {
   const targets = ALL_STATUTS.filter(s => s !== currentStatut);
   return `
     <details class="manual-ctrl" style="margin-top:10px">
-      <summary>⚙ Contrôle manuel (admin)</summary>
+      <summary>⚙ Contrôle manuel du statut</summary>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
         ${targets.map(s => `
           <button class="btn btn-sm" style="font-size:.75rem;background:var(--bg-surface)"
