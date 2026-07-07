@@ -73,6 +73,14 @@ function toggleDeadlineField(section) {
   const docGrp  = document.getElementById("document-url-group");
   if (group)  group.style.display  = isPropo ? "" : "none";
   if (docGrp) docGrp.style.display = isPropo ? "" : "none";
+
+  // Pour les propositions, la description devient optionnelle si un doc est joint
+  const label = document.getElementById("description-label");
+  const hint  = document.getElementById("description-hint");
+  if (label) label.innerHTML = isPropo
+    ? `Contenu <span style="color:var(--text-muted);font-weight:400">(optionnel si doc joint)</span>`
+    : `Contenu <span class="required">*</span>`;
+  if (hint) hint.style.display = isPropo ? "" : "none";
 }
 
 function buildCategorySelect(section) {
@@ -148,7 +156,13 @@ async function handleSubmit(ev) {
   if (!title)    { showToast("Le titre est requis.", "error"); return; }
   if (!category) { showToast("La catégorie est requise.", "error"); return; }
   if (!status)   { showToast("Le statut est requis.", "error"); return; }
-  if (!description) { showToast("La description est requise.", "error"); return; }
+  if (section === "propositions") {
+    if (!description && !documentUrl) {
+      showToast("Remplis la description ou ajoute un document joint.", "error"); return;
+    }
+  } else {
+    if (!description) { showToast("La description est requise.", "error"); return; }
+  }
 
   const replacesTitle = replacesId ? (allEntries.find(e => e.id === replacesId)?.title || "") : "";
 

@@ -297,6 +297,9 @@ export async function sendDiscordNotification(type, entry) {
     if (entry.voteDeadline) {
       fields.push({ name: "⏰ Deadline vote", value: fmtDate(entry.voteDeadline), inline: true });
     }
+    if (entry.documentUrl) {
+      fields.push({ name: "📎 Document joint", value: entry.documentUrl, inline: false });
+    }
     if (descSnippet) fields.push({ name: "Description", value: descSnippet, inline: false });
 
   // ── Changement de statut ──────────────────────────────────────

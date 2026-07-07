@@ -119,20 +119,22 @@ function renderEntry(e) {
       </div>
     </div>
 
-    <div class="detail-card">
-      <div class="card-header-bar"><h3>Description</h3></div>
-      <div class="card-content">
-        <div class="detail-description">${escapeHtml(e.description)}</div>
-      </div>
-    </div>
-
     ${isPropo && e.documentUrl ? `
-      <div class="detail-card">
-        <div class="card-header-bar"><h3>Document joint</h3></div>
+      <div class="detail-card" style="border-left:3px solid var(--accent,#c0392b)">
+        <div class="card-header-bar"><h3>📎 Document joint</h3></div>
         <div class="card-content" style="padding:14px 18px">
-          <a href="${e.documentUrl}" target="_blank" rel="noopener" class="btn btn-secondary" style="width:fit-content">
-            📎 Consulter le document
+          <a href="${e.documentUrl}" target="_blank" rel="noopener" class="btn btn-primary" style="width:fit-content">
+            📄 Consulter le document →
           </a>
+        </div>
+      </div>
+    ` : ""}
+
+    ${e.description ? `
+      <div class="detail-card">
+        <div class="card-header-bar"><h3>Description</h3></div>
+        <div class="card-content">
+          <div class="detail-description">${escapeHtml(e.description)}</div>
         </div>
       </div>
     ` : ""}
