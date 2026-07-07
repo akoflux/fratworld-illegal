@@ -177,6 +177,16 @@ export async function refuserDossier(id, dossier, reason) {
   await sendDossierNotification("dossier_archive", { id, ...dossier, statut: "Refusé" }, votesNeeded);
 }
 
+// Contrôle manuel : forcer un statut sans passer par le workflow automatique
+export async function setDossierStatut(id, statut) {
+  const { name } = authorInfo();
+  await updateDoc(doc(db, "dossiers", id), {
+    statut,
+    updatedAt:  serverTimestamp(),
+    updatedBy:  name
+  });
+}
+
 // Legacy — conservé pour compat éventuelle
 export async function archiveDossier(id, dossier, decision) {
   if (decision === "Refusé") return refuserDossier(id, dossier, "");

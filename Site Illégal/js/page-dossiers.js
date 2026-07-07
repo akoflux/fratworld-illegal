@@ -1,7 +1,7 @@
 import { requireAuth, getCurrentUser, isAdmin, isSpectateur } from "./auth.js";
 import {
   subscribeDossiers, createDossier, voteDossier,
-  validerEntretien, validerInstallation, refuserDossier, deleteDossier
+  validerEntretien, validerInstallation, refuserDossier, setDossierStatut, deleteDossier
 } from "./dossiers.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import { renderNavbar, showToast, confirmModal, promptReason, formatDate } from "./ui-shared.js";
@@ -212,6 +212,7 @@ function dossierCard(d, isArchive) {
         </div>`}
         ${voteButtonsHtml}
         ${adminHtml ? `<div class="vote-btns" style="margin-top:8px">${adminHtml}</div>` : ""}
+        ${admin ? manualControlHtml(d.id, statut) : ""}
       </div>`;
   } else {
     voteSection = `
@@ -359,6 +360,46 @@ window.handleDeleteDossier = async (id, nom) => {
   try {
     await deleteDossier(id);
     showToast("Dossier supprimé.", "success");
+  } catch (err) {
+    showToast("Erreur.", "error"); console.error(err);
+  }
+};
+
+const ALL_STATUTS = [
+  "En attente d'étude",
+  "En attente d'entretien",
+  "En attente d'installation"
+];
+
+function manualControlHtml(id, currentStatut) {
+  const targets = ALL_STATUTS.filter(s => s !== currentStatut);
+  return `
+    <details class="manual-ctrl" style="margin-top:10px">
+      <summary>⚙ Contrôle manuel (admin)</summary>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+        ${targets.map(s => `
+          <button class="btn btn-sm" style="font-size:.75rem;background:var(--bg-surface)"
+            onclick="handleSetStatut('${id}','${s}')">
+            Passer à : <em>${s}</em>
+          </button>`).join("")}
+        <button class="btn btn-sm" style="font-size:.75rem;background:var(--s-refused-bg);color:var(--s-refused)"
+          onclick="handleRefuser('${id}')">
+          ❌ Refuser (archiver)
+        </button>
+      </div>
+    </details>`;
+}
+
+window.handleSetStatut = async (id, statut) => {
+  const ok = await confirmModal(
+    "Modifier le statut manuellement",
+    `Passer ce dossier en <strong>${statut}</strong> ?<br><small style="color:var(--text-muted)">Cette action ignore le workflow automatique.</small>`,
+    "Confirmer"
+  );
+  if (!ok) return;
+  try {
+    await setDossierStatut(id, statut);
+    showToast("Statut mis à jour.", "success");
   } catch (err) {
     showToast("Erreur.", "error"); console.error(err);
   }

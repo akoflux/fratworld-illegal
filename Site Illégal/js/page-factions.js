@@ -1,10 +1,13 @@
+import { db } from "./firebase-init.js";
 import { requireAuth, isAdmin, isSpectateur } from "./auth.js";
 import { subscribeFactions, createFaction, updateFaction, deleteFaction } from "./factions-list.js";
 import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-let allFactions = [];
-let editingId   = null;
-let unsubscribe = null;
+let allFactions  = [];
+let gestionnaires = {}; // poste → displayName
+let editingId    = null;
+let unsubscribe  = null;
 
 const TYPE_COLORS = {
   "Gang":                 "#22c55e",
@@ -14,14 +17,43 @@ const TYPE_COLORS = {
   "Indépendant":          "#6b7280"
 };
 
+const TYPE_ICONS = {
+  "Gang":                 "🏴",
+  "Mafia":                "🤵",
+  "Cartel":               "💊",
+  "MC / Groupe atypique": "🏍",
+  "Indépendant":          "👤"
+};
+
+const TYPE_ORDER = ["Gang", "Mafia", "Cartel", "MC / Groupe atypique", "Indépendant"];
+
+const POSTE_BY_TYPE = {
+  "Gang":                 "Gestionnaire Gang",
+  "MC / Groupe atypique": "Gestionnaire Groupe Atypique",
+  "Mafia":                "Gestionnaire Mafia/Cartel",
+  "Cartel":               "Gestionnaire Mafia/Cartel"
+};
+
 const STATUT_CLASS = {
   "Actif":      "faction-statut-actif",
   "En suspens": "faction-statut-suspens",
   "Dissoute":   "faction-statut-dissoute"
 };
 
-requireAuth(() => {
+async function loadGestionnaires() {
+  try {
+    const snap = await getDocs(collection(db, "users"));
+    gestionnaires = {};
+    snap.docs.forEach(d => {
+      const u = d.data();
+      if (u.poste) gestionnaires[u.poste] = u.displayName || u.email || "—";
+    });
+  } catch (_) { gestionnaires = {}; }
+}
+
+requireAuth(async () => {
   renderNavbar("factions");
+  await loadGestionnaires();
 
   unsubscribe = subscribeFactions(factions => {
     allFactions = factions;
@@ -45,9 +77,11 @@ window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); 
 
 function renderFactions() {
   const container = document.getElementById("factions-grid");
-  document.getElementById("faction-count").textContent = `${allFactions.length} faction${allFactions.length !== 1 ? "s" : ""}`;
+  const total     = allFactions.length;
+  document.getElementById("faction-count").textContent = `${total} faction${total !== 1 ? "s" : ""}`;
 
-  if (!allFactions.length) {
+  if (!total) {
+    container.style.display = "";
     container.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
         <div class="empty-icon">🏴</div>
@@ -57,7 +91,39 @@ function renderFactions() {
     return;
   }
 
-  container.innerHTML = allFactions.map(f => factionCard(f)).join("");
+  // Groupement par type
+  container.style.display = "block";
+  let html = "";
+
+  for (const type of TYPE_ORDER) {
+    const group = allFactions.filter(f => f.type === type);
+    if (!group.length) continue;
+
+    const color    = TYPE_COLORS[type] || "#6b7280";
+    const icon     = TYPE_ICONS[type]  || "🏴";
+    const poste    = POSTE_BY_TYPE[type];
+    const gestName = poste ? (gestionnaires[poste] || null) : null;
+
+    html += `
+      <div class="faction-type-section">
+        <div class="faction-type-header" style="border-left:4px solid ${color}">
+          <div style="display:flex;align-items:center;gap:10px;flex:1">
+            <span style="font-size:1.1rem">${icon}</span>
+            <span class="faction-type-title" style="color:${color}">${type}</span>
+            <span class="faction-type-count">${group.length} faction${group.length > 1 ? "s" : ""}</span>
+          </div>
+          ${gestName
+            ? `<a href="/organigramme.html" class="faction-gest-badge" title="Voir l'organigramme">
+                 👤 Référent : <strong>${esc(gestName)}</strong> →
+               </a>`
+            : `<span class="faction-gest-badge faction-gest-unset">👤 Référent non assigné</span>`
+          }
+        </div>
+        <div class="factions-grid">${group.map(f => factionCard(f)).join("")}</div>
+      </div>`;
+  }
+
+  container.innerHTML = html;
 }
 
 function factionCard(f) {
@@ -68,48 +134,45 @@ function factionCard(f) {
   const hasHistory = (f.leadHistory || []).length > 0;
 
   return `
-    <div class="detail-card" style="border-left: 3px solid ${color}; cursor:default">
-      <div class="card-header-bar" style="padding:14px 18px">
+    <div class="detail-card" style="border-left:3px solid ${color};cursor:default">
+      <div class="card-header-bar" style="padding:12px 16px">
         <div style="flex:1">
-          <div style="font-size:1rem;font-weight:800;color:var(--text-primary)">${f.nom}</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-            <span class="badge" style="background:${color}20;color:${color};border-color:${color}40">${f.type}</span>
-            <span class="${statutCls}" style="font-size:.78rem">${statut}</span>
-          </div>
+          <div style="font-size:.98rem;font-weight:800;color:var(--text-primary)">${esc(f.nom)}</div>
+          <span class="${statutCls}" style="font-size:.76rem;margin-top:3px;display:inline-block">${statut}</span>
         </div>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:5px;align-items:center">
           ${hasHistory ? `<button class="btn-icon" title="Historique leads" onclick="showLeadHistory('${f.id}')">📋</button>` : ""}
           <a href="/faction-detail.html?id=${f.id}" class="btn-icon" title="Voir membres" style="text-decoration:none">👥</a>
           ${!isSpectateur() ? `<button class="btn-icon" title="Modifier" onclick="openEditModal('${f.id}')">✎</button>` : ""}
           ${admin ? `<button class="btn-icon danger" title="Supprimer" onclick="handleDeleteFaction('${f.id}','${esc(f.nom)}')">✕</button>` : ""}
         </div>
       </div>
-      <div class="card-content" style="padding:14px 18px">
-        <div class="info-grid" style="grid-template-columns:1fr 1fr">
+      <div class="card-content" style="padding:12px 16px">
+        <div class="info-grid" style="grid-template-columns:1fr 1fr;gap:8px">
           <div class="info-item">
             <div class="info-label">Lead</div>
-            <div class="info-value">${f.lead || "—"}</div>
+            <div class="info-value" style="font-size:.88rem">${esc(f.lead) || "—"}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Co-Lead</div>
-            <div class="info-value">${f.coLead || "—"}</div>
+            <div class="info-value" style="font-size:.88rem">${esc(f.coLead) || "—"}</div>
           </div>
           <div class="info-item" style="grid-column:1/-1">
-            <div class="info-label">Business / Activité</div>
-            <div class="info-value" style="color:var(--text-secondary);font-weight:400">${f.business || "—"}</div>
+            <div class="info-label">Business</div>
+            <div class="info-value" style="color:var(--text-secondary);font-weight:400;font-size:.85rem">${esc(f.business) || "—"}</div>
           </div>
           ${f.notes ? `
           <div class="info-item" style="grid-column:1/-1">
-            <div class="info-label">Notes internes</div>
-            <div class="faction-notes">${f.notes}</div>
+            <div class="info-label">Notes</div>
+            <div class="faction-notes">${esc(f.notes)}</div>
           </div>` : ""}
           <div class="info-item">
             <div class="info-label">Dernier contact</div>
-            <div class="info-value" style="color:var(--text-secondary);font-size:.82rem">${f.dernierContact ? new Date(f.dernierContact).toLocaleDateString("fr-FR") : "—"}</div>
+            <div class="info-value" style="color:var(--text-secondary);font-size:.8rem">${f.dernierContact ? new Date(f.dernierContact).toLocaleDateString("fr-FR") : "—"}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Mis à jour</div>
-            <div class="info-value" style="color:var(--text-muted);font-size:.78rem">${formatDate(f.updatedAt)} par ${f.updatedBy || f.authorName || "—"}</div>
+            <div class="info-value" style="color:var(--text-muted);font-size:.76rem">${formatDate(f.updatedAt)}</div>
           </div>
         </div>
       </div>
@@ -224,4 +287,4 @@ window.handleDeleteFaction = async (id, nom) => {
   }
 };
 
-function esc(s) { return String(s).replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
+function esc(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "\\'"); }
