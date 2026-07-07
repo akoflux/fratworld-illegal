@@ -1,8 +1,8 @@
 import { db } from "./firebase-init.js";
-import { requireAuth } from "./auth.js";
-import { renderNavbar, formatDate } from "./ui-shared.js";
+import { requireAuth, isAdmin } from "./auth.js";
+import { renderNavbar, formatDate, confirmModal, showToast } from "./ui-shared.js";
 import {
-  collection, getDocs, query, orderBy, where
+  collection, getDocs, query, orderBy, doc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let allItems  = [];
@@ -108,7 +108,6 @@ function render() {
 }
 
 function entryArchiveCard(e) {
-  const isPropo = e.section === "propositions";
   const statusColor = {
     "Archivée": "var(--text-muted)",
     "Validé":   "var(--s-valid)",
@@ -118,7 +117,7 @@ function entryArchiveCard(e) {
   const sectionLabel = { decisions: "Décision", propositions: "Proposition", factions: "Faction" }[e.section] || e.section;
 
   return `
-    <div class="detail-card" style="margin-bottom:12px">
+    <div class="detail-card" style="margin-bottom:12px" id="arc-${e.id}">
       <div class="card-header-bar">
         <div style="flex:1">
           <div style="font-size:.95rem;font-weight:700;color:var(--text-primary)">
@@ -129,7 +128,11 @@ function entryArchiveCard(e) {
             ${sectionLabel} · ${esc(e.category || "—")} · ${esc(e.authorName || "—")} · ${formatDate(e.updatedAt)}
           </div>
         </div>
-        <span style="font-size:.8rem;font-weight:700;color:${statusColor}">${e.status}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:.8rem;font-weight:700;color:${statusColor}">${e.status}</span>
+          ${isAdmin() ? `<button class="btn-icon danger" title="Supprimer définitivement"
+            onclick="handleDeleteArchive('${e.id}','entry')">✕</button>` : ""}
+        </div>
       </div>
       ${e.description ? `
         <div class="card-content" style="padding:10px 18px">
@@ -139,14 +142,15 @@ function entryArchiveCard(e) {
 }
 
 function dossierArchiveCard(d) {
-  const statutColor = d.statut === "Faction créée" ? "var(--s-valid)"
+  const statutColor = d.statut === "Faction créée" || d.statut === "Installation faite"
+    ? "var(--s-valid)"
     : d.statut === "Refusé" ? "var(--s-refused)" : "var(--text-muted)";
 
   const votesFor     = (d.votesFor || d.votes || []).length;
   const votesAgainst = (d.votesAgainst || []).length;
 
   return `
-    <div class="detail-card" style="margin-bottom:12px">
+    <div class="detail-card" style="margin-bottom:12px" id="arc-${d.id}">
       <div class="card-header-bar">
         <div style="flex:1">
           <div style="font-size:.95rem;font-weight:700;color:var(--text-primary)">${esc(d.nomGroupe)}</div>
@@ -155,7 +159,11 @@ function dossierArchiveCard(d) {
           </div>
           ${d.contactName ? `<div style="font-size:.74rem;color:var(--text-secondary)">👤 ${esc(d.contactName)}${d.contactDiscord ? ` · ${esc(d.contactDiscord)}` : ""}</div>` : ""}
         </div>
-        <span style="font-size:.8rem;font-weight:700;color:${statutColor}">${d.statut}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:.8rem;font-weight:700;color:${statutColor}">${d.statut}</span>
+          ${isAdmin() ? `<button class="btn-icon danger" title="Supprimer définitivement"
+            onclick="handleDeleteArchive('${d.id}','dossier')">✕</button>` : ""}
+        </div>
       </div>
       <div class="card-content" style="padding:10px 18px">
         <div style="font-size:.78rem;color:var(--text-muted)">
@@ -168,6 +176,36 @@ function dossierArchiveCard(d) {
         </div>
       </div>
     </div>`;
+}
+
+window.handleDeleteArchive = async (id, kind) => {
+  const label = kind === "dossier" ? "ce dossier archivé" : "cette entrée archivée";
+  const ok = await confirmModal(
+    "Supprimer définitivement",
+    `Supprimer <strong>${label}</strong> ? Cette action est <strong>irréversible</strong>.`,
+    "Supprimer"
+  );
+  if (!ok) return;
+
+  try {
+    const colName = kind === "dossier" ? "dossiers" : "entries";
+    await deleteDoc(doc(db, colName, id));
+    allItems = allItems.filter(i => i.id !== id);
+    document.getElementById(`arc-${id}`)?.remove();
+    const count = allItems.filter(i => activeType === "all" || filterMatch(i)).length;
+    document.getElementById("archive-count").textContent =
+      `${count} élément${count !== 1 ? "s" : ""} archivé${count !== 1 ? "s" : ""}`;
+    showToast("Archive supprimée.", "success");
+  } catch (err) {
+    showToast("Erreur lors de la suppression.", "error"); console.error(err);
+  }
+};
+
+function filterMatch(i) {
+  if (activeType === "dossiers")     return i._kind === "dossier";
+  if (activeType === "decisions")    return i._kind === "entry" && i.section !== "propositions";
+  if (activeType === "propositions") return i._kind === "entry" && i.section === "propositions";
+  return true;
 }
 
 function tsToMs(ts) {
