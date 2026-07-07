@@ -78,17 +78,19 @@ export async function sendDossierNotification(type, dossier, votesNeeded, mentio
   let title, description, color, fields;
 
   if (type === "dossier_create") {
-    color       = 0xef4444;
-    title       = `⚡ Vote URGENT — ${dossier.nomGroupe}`;
-    description = `**${dossier.authorName}** a soumis un dossier de candidature.\n@everyone Votez dès que possible !`;
+    const contact = dossier.contactName || dossier.authorName || "—";
+    color  = 0x3b82f6;
+    title  = `📂 Nouveau dossier · ${dossier.nomGroupe}`;
+    description = `**${contact}** souhaite créer une faction sur le serveur.`
+      + (dossier.description ? `\n> ${dossier.description.slice(0, 100)}${dossier.description.length > 100 ? "…" : ""}` : "")
+      + `\n_Consultez le dossier et exprimez votre vote._`;
     fields = [
-      { name: "Type de groupe", value: dossier.typeGroupe || "—",  inline: true },
-      { name: "Contact",        value: dossier.contactName || dossier.authorName || "—", inline: true },
-      { name: "Votes requis",   value: String(votesNeeded ?? "—"), inline: true }
+      { name: "Type",          value: dossier.typeGroupe || "—", inline: true },
+      { name: "Contact",       value: contact,                   inline: true },
+      { name: "Votes requis",  value: String(votesNeeded ?? "—"),inline: true }
     ];
     if (dossier.voteDeadline) fields.push({ name: "⏰ Deadline", value: fmtDate(dossier.voteDeadline), inline: true });
-    if (dossier.description)  fields.push({ name: "Description", value: dossier.description.slice(0, 150), inline: false });
-    if (dossier.lienDossier)  fields.push({ name: "🔗 Dossier",  value: dossier.lienDossier, inline: false });
+    if (dossier.lienDossier)  fields.push({ name: "📄 Dossier",  value: dossier.lienDossier, inline: false });
 
   } else if (type === "dossier_threshold") {
     color       = 0xeab308;
