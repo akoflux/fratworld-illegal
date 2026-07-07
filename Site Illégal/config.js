@@ -28,6 +28,6 @@ const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/152078979022691132
 
 // URL publique du site (utilisée pour les liens dans les messages Discord).
 // Ex: "https://fratworld-staff.netlify.app"
-const SITE_URL = "https://fratworld-illegal.netlify.app/";
+const SITE_URL = "https://fratworld-illegal.akoflux.workers.dev";
 
 export { FIREBASE_CONFIG, DISCORD_WEBHOOK_URL, SITE_URL };
