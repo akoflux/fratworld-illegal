@@ -1,7 +1,7 @@
 import { requireAuth, getCurrentUser, isAdmin, isSpectateur } from "./auth.js";
 import {
   subscribeDossiers, createDossier, voteDossier,
-  validerEntretien, validerInstallation, refuserDossier, setDossierStatut, deleteDossier
+  changerStatutDossier, deleteDossier
 } from "./dossiers.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import { renderNavbar, showToast, confirmModal, promptReason, formatDate } from "./ui-shared.js";
@@ -31,25 +31,40 @@ requireAuth(async () => {
     document.getElementById("new-dossier-btn").style.display = "none";
   }
 
-  document.getElementById("new-dossier-btn").addEventListener("click", () => {
-    document.getElementById("dossier-modal").classList.add("open");
-  });
-  document.getElementById("modal-cancel-btn").addEventListener("click", closeModal);
   document.getElementById("dossier-form").addEventListener("submit", handleCreate);
   document.getElementById("toggle-archived").addEventListener("click", () => {
     showArchived = !showArchived;
     document.getElementById("toggle-archived").textContent = showArchived ? "Masquer l'historique" : "Voir l'historique";
     renderDossiers();
   });
-  document.getElementById("dossier-modal-overlay").addEventListener("click", closeModal);
+
+  // Installation modal form
+  document.getElementById("installation-form")?.addEventListener("submit", handleInstallationSubmit);
 });
 
 window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); });
 
-function closeModal() {
-  document.getElementById("dossier-modal").classList.remove("open");
-  document.getElementById("dossier-form").reset();
-}
+// ── Statuts ───────────────────────────────────────────────────
+
+const STATUS_BADGE = {
+  "En attente d'étude":        `<span class="badge badge-debate">En attente d'étude</span>`,
+  "En attente d'entretien":    `<span class="badge badge-valid">En attente d'entretien</span>`,
+  "En attente d'installation": `<span class="badge" style="background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3)">En attente d'installation</span>`,
+  "Installation faite":        `<span class="badge badge-valid">✅ Installation faite</span>`,
+  "Faction créée":             `<span class="badge badge-valid">✅ Faction créée</span>`,
+  "Refusé":                    `<span class="badge badge-refused">Refusé</span>`,
+  "En cours":                  `<span class="badge badge-debate">En cours</span>`
+};
+
+const STATUS_PICK_OPTS = [
+  { value: "En attente d'étude",        label: "⏳ En attente d'étude",         cls: "" },
+  { value: "En attente d'entretien",    label: "📅 En attente d'entretien",     cls: "" },
+  { value: "En attente d'installation", label: "🔧 En attente d'installation",  cls: "" },
+  { value: "Installation faite",        label: "✅ Installation faite",          cls: "success" },
+  { value: "Refusé",                    label: "❌ Refuser (archiver)",           cls: "danger" }
+];
+
+// ── Render ────────────────────────────────────────────────────
 
 function renderDossiers() {
   const active   = allDossiers.filter(d => !d.archived);
@@ -81,16 +96,6 @@ function renderList(containerId, dossiers, isArchive) {
   container.innerHTML = dossiers.map(d => dossierCard(d, isArchive)).join("");
 }
 
-// Statut → badge HTML
-const STATUS_BADGE = {
-  "En attente d'étude":        `<span class="badge badge-debate">En attente d'étude</span>`,
-  "En attente d'entretien":    `<span class="badge badge-valid">En attente d'entretien</span>`,
-  "En attente d'installation": `<span class="badge" style="background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3)">En attente d'installation</span>`,
-  "Faction créée":             `<span class="badge badge-valid">✅ Faction créée</span>`,
-  "Refusé":                    `<span class="badge badge-refused">Refusé</span>`,
-  "En cours":                  `<span class="badge badge-debate">En cours</span>` // legacy
-};
-
 function dossierCard(d, isArchive) {
   const uid = getCurrentUser()?.uid;
 
@@ -100,17 +105,25 @@ function dossierCard(d, isArchive) {
 
   const countFor     = votesFor.length;
   const countAgainst = votesAgainst.length;
-
   const hasVotedFor     = votesFor.includes(uid);
   const hasVotedAgainst = votesAgainst.includes(uid);
   const hasVoted        = hasVotedFor || hasVotedAgainst;
 
-  const admin     = isAdmin();
-  const statut    = d.statut || "En attente d'étude";
-  const statusBadge = STATUS_BADGE[statut] || `<span class="badge">${statut}</span>`;
+  const statut   = d.statut || "En attente d'étude";
+  const isUrgent = !isArchive && (statut === "En attente d'étude" || statut === "En cours");
+  const canChange = !isArchive && !isSpectateur();
+
+  // Badge statut : cliquable ou statique
+  const badgeInner = STATUS_BADGE[statut] || `<span class="badge">${statut}</span>`;
+  const statusHtml = canChange
+    ? `<button class="dossier-status-btn" onclick="openStatusPicker('${d.id}',event)" title="Changer le statut">
+         ${badgeInner}
+         <span class="dossier-status-caret">▾</span>
+       </button>`
+    : badgeInner;
 
   // Deadline
-  let deadlineHtml    = "";
+  let deadlineHtml = "";
   let deadlineExpired = false;
   if (d.voteDeadline) {
     const dl = new Date(d.voteDeadline);
@@ -129,15 +142,12 @@ function dossierCard(d, isArchive) {
   const pctAgainst = Math.min(100, Math.round(countAgainst / VOTES_NEEDED_COUNT * 100));
   const thresholdReached = countFor >= VOTES_NEEDED_COUNT;
 
-  // Raisons des votes contre
   const reasonTexts = votesAgainst
     .map(u => reasons[u] ? `<div class="vote-reason-item">👎 <em class="vote-reason-text">"${esc(reasons[u])}"</em></div>` : "")
     .filter(Boolean).join("");
-  const reasonsHtml = reasonTexts
-    ? `<div class="dossier-against-reasons">${reasonTexts}</div>`
-    : "";
+  const reasonsHtml = reasonTexts ? `<div class="dossier-against-reasons">${reasonTexts}</div>` : "";
 
-  // Boutons de vote (seulement pour "En attente d'étude")
+  // Boutons de vote (uniquement en attente d'étude)
   const canVote = !isArchive && !deadlineExpired && !isSpectateur()
     && (statut === "En attente d'étude" || statut === "En cours");
   let voteButtonsHtml = "";
@@ -163,26 +173,13 @@ function dossierCard(d, isArchive) {
     }
   }
 
-  // Boutons admin selon l'étape du workflow
-  let adminHtml = "";
-  if (!isArchive && admin) {
-    if (statut === "En attente d'entretien") {
-      adminHtml = `
-        <button class="btn btn-sm" style="background:var(--s-valid-bg);color:var(--s-valid);border:1px solid var(--s-valid-border)"
-          onclick="handleValiderEntretien('${d.id}')">✅ Valider l'entretien</button>
-        <button class="btn btn-sm" style="background:var(--s-refused-bg);color:var(--s-refused);border:1px solid var(--s-refused-border)"
-          onclick="handleRefuser('${d.id}')">❌ Refuser</button>`;
-    } else if (statut === "En attente d'installation") {
-      adminHtml = `
-        <button class="btn btn-sm" style="background:var(--s-valid-bg);color:var(--s-valid);border:1px solid var(--s-valid-border)"
-          onclick="handleValiderInstallation('${d.id}')">🏴 Créer la faction</button>
-        <button class="btn btn-sm" style="background:var(--s-refused-bg);color:var(--s-refused);border:1px solid var(--s-refused-border)"
-          onclick="handleRefuser('${d.id}')">❌ Refuser</button>`;
-    }
-    adminHtml += `<button class="btn-icon danger" title="Supprimer" onclick="handleDeleteDossier('${d.id}','${esc(d.nomGroupe)}')">✕</button>`;
-  }
+  // Bouton suppression (admin seulement)
+  const deleteBtn = isAdmin() && !isArchive
+    ? `<div style="display:flex;justify-content:flex-end;margin-top:8px">
+         <button class="btn-icon danger" title="Supprimer" onclick="handleDeleteDossier('${d.id}')">✕</button>
+       </div>`
+    : "";
 
-  // Section vote complète ou résumé archive
   let voteSection = "";
   if (!isArchive) {
     const showVoteBars = statut === "En attente d'étude" || statut === "En cours";
@@ -207,18 +204,17 @@ function dossierCard(d, isArchive) {
             </div>
           </div>
           ${reasonsHtml}
-          ${thresholdReached ? `<div style="font-size:.78rem;color:var(--s-valid);margin-bottom:6px">✓ Seuil atteint</div>` : ""}
+          ${thresholdReached ? `<div style="font-size:.78rem;color:var(--s-valid);margin-bottom:6px">✓ Seuil atteint — avancez via le badge de statut</div>` : ""}
         ` : `<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px">
           Votes : ${countFor} pour · ${countAgainst} contre
         </div>`}
         ${voteButtonsHtml}
-        ${adminHtml ? `<div class="vote-btns" style="margin-top:8px">${adminHtml}</div>` : ""}
-        ${!isSpectateur() ? manualControlHtml(d.id, statut) : ""}
+        ${deleteBtn}
       </div>`;
   } else {
     voteSection = `
       <div class="vote-section" style="font-size:.78rem;color:var(--text-muted)">
-        Archivé le ${formatDate(d.archivedAt)} par ${esc(d.archivedBy || "—")}
+        Archivé le ${formatDate(d.archivedAt)} · ${esc(d.archivedBy || "—")}
         · ${countFor} vote(s) pour · ${countAgainst} vote(s) contre
         ${d.refusalReason ? `<div style="margin-top:6px;color:var(--s-refused)">Motif : <em>${esc(d.refusalReason)}</em></div>` : ""}
         ${d.factionId ? `<div style="margin-top:4px"><a href="/faction-detail.html?id=${d.factionId}" class="btn btn-sm btn-secondary" style="font-size:.75rem">🏴 Voir la faction</a></div>` : ""}
@@ -226,7 +222,7 @@ function dossierCard(d, isArchive) {
   }
 
   return `
-    <div class="dossier-card ${isArchive ? "archived" : ""}">
+    <div class="dossier-card ${isArchive ? "archived" : ""} ${isUrgent ? "dossier-card-urgent" : ""}">
       <div class="dossier-header">
         <div>
           <div class="dossier-title">${esc(d.nomGroupe)}</div>
@@ -236,8 +232,9 @@ function dossierCard(d, isArchive) {
           ${d.contactName ? `<div style="font-size:.75rem;color:var(--text-secondary);margin-top:2px">
             👤 ${esc(d.contactName)}${d.contactDiscord ? ` · ${esc(d.contactDiscord)}` : ""}
           </div>` : ""}
+          ${isUrgent ? `<span class="dossier-urgent-badge">⚡ Vote urgent</span>` : ""}
         </div>
-        ${statusBadge}
+        ${statusHtml}
       </div>
       <div class="dossier-body">
         ${d.description ? `<div class="dossier-desc">${esc(d.description)}</div>` : ""}
@@ -250,50 +247,143 @@ function dossierCard(d, isArchive) {
     </div>`;
 }
 
-async function handleCreate(ev) {
-  ev.preventDefault();
-  const nomGroupe      = document.getElementById("d-nom").value.trim();
-  const typeGroupe     = document.getElementById("d-type").value;
-  const lienDossier    = document.getElementById("d-lien").value.trim();
-  const description    = document.getElementById("d-desc").value.trim();
-  const voteDeadline   = document.getElementById("d-deadline")?.value || null;
-  const contactName    = document.getElementById("d-contact-name").value.trim();
-  const contactDiscord = document.getElementById("d-contact-discord").value.trim();
+// ── Status picker ─────────────────────────────────────────────
 
-  if (!nomGroupe || !typeGroupe || !lienDossier || !contactName) {
-    showToast("Remplis tous les champs obligatoires.", "error"); return;
+window.openStatusPicker = function(id, event) {
+  event.stopPropagation();
+
+  const d = allDossiers.find(x => x.id === id);
+  if (!d) return;
+  const currentStatut = d.statut || "En attente d'étude";
+
+  const picker = document.getElementById("status-picker");
+  const rect   = event.currentTarget.getBoundingClientRect();
+
+  picker.innerHTML = STATUS_PICK_OPTS
+    .filter(o => o.value !== currentStatut)
+    .map(o => `<button class="status-pick-btn ${o.cls}" data-statut="${o.value}" data-id="${id}">
+      ${o.label}
+    </button>`)
+    .join("");
+
+  picker.querySelectorAll(".status-pick-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      window.closeStatusPicker();
+      window.handlePickStatus(btn.dataset.id, btn.dataset.statut);
+    });
+  });
+
+  // Positionnement : évite de sortir du viewport
+  const pickerW = 250;
+  let left = rect.left;
+  if (left + pickerW > window.innerWidth - 8) left = window.innerWidth - pickerW - 8;
+
+  picker.style.top     = (rect.bottom + 4) + "px";
+  picker.style.left    = left + "px";
+  picker.style.display = "block";
+
+  setTimeout(() => {
+    document.addEventListener("click", window.closeStatusPicker, { once: true });
+  }, 0);
+};
+
+window.closeStatusPicker = function() {
+  const p = document.getElementById("status-picker");
+  if (p) p.style.display = "none";
+};
+
+window.handlePickStatus = async (id, newStatut) => {
+  const d = allDossiers.find(x => x.id === id);
+  if (!d) return;
+
+  if (newStatut === "Refusé") {
+    const result = await promptReason("❌ Motif de refus", "Ex : Manque de cohérence RP, groupe déjà existant…");
+    if (!result.ok) return;
+    try {
+      await changerStatutDossier(id, d, "Refusé", { reason: result.reason });
+      showToast("Dossier refusé et archivé.", "success");
+    } catch (err) {
+      showToast("Erreur.", "error"); console.error(err);
+    }
+    return;
   }
 
-  // Détection re-soumission
-  const refused = allDossiers.filter(d => d.statut === "Refusé" && d.archived);
-  const nomLower = nomGroupe.toLowerCase();
-  const match = refused.find(d =>
-    d.nomGroupe?.toLowerCase() === nomLower ||
-    (contactDiscord && d.contactDiscord && d.contactDiscord.toLowerCase() === contactDiscord.toLowerCase())
+  if (newStatut === "Installation faite") {
+    openInstallationModal(id, d);
+    return;
+  }
+
+  const ok = await confirmModal(
+    "Modifier le statut",
+    `Passer ce dossier en <strong>${newStatut}</strong> ?`,
+    "Confirmer"
   );
-  if (match) {
-    const warning = `
-      ⚠️ Ce groupe ou ce contact a déjà été refusé.<br>
-      <strong>Motif :</strong> ${match.refusalReason || "Non précisé"}<br>
-      <strong>Refusé le :</strong> ${formatDate(match.archivedAt)}<br><br>
-      Veux-tu quand même créer ce dossier ?`;
-    const ok = await confirmModal("Dossier déjà refusé", warning, "Créer quand même");
-    if (!ok) return;
-  }
-
-  const btn = document.getElementById("d-submit");
-  btn.disabled = true; btn.textContent = "Création…";
+  if (!ok) return;
 
   try {
-    await createDossier({ nomGroupe, typeGroupe, lienDossier, description, voteDeadline, contactName, contactDiscord });
-    showToast("Dossier créé.", "success");
-    closeModal();
+    await changerStatutDossier(id, d, newStatut, {});
+    showToast("Statut mis à jour.", "success");
   } catch (err) {
-    showToast("Erreur lors de la création.", "error"); console.error(err);
-  } finally {
-    btn.disabled = false; btn.textContent = "Créer le dossier";
+    showToast("Erreur.", "error"); console.error(err);
+  }
+};
+
+// ── Modal installation faction ────────────────────────────────
+
+let installId      = null;
+let installDossier = null;
+
+function openInstallationModal(id, dossier) {
+  installId      = id;
+  installDossier = dossier;
+
+  const nomEl = document.getElementById("inst-nom-groupe");
+  if (nomEl) nomEl.textContent = dossier.nomGroupe;
+
+  document.getElementById("inst-lead").value     = dossier.contactName || "";
+  document.getElementById("inst-colead").value   = "";
+  document.getElementById("inst-business").value = "";
+  document.getElementById("inst-notes").value    = "";
+
+  document.getElementById("installation-modal").style.display   = "block";
+  document.getElementById("installation-overlay").style.display = "block";
+}
+
+window.cancelInstallation = function() {
+  document.getElementById("installation-modal").style.display   = "none";
+  document.getElementById("installation-overlay").style.display = "none";
+};
+
+async function handleInstallationSubmit(ev) {
+  ev.preventDefault();
+
+  const lead     = document.getElementById("inst-lead").value.trim();
+  const coLead   = document.getElementById("inst-colead").value.trim();
+  const business = document.getElementById("inst-business").value.trim();
+  const notes    = document.getElementById("inst-notes").value.trim();
+
+  window.cancelInstallation();
+
+  const id      = installId;
+  const dossier = installDossier;
+
+  try {
+    const factionId = await changerStatutDossier(id, dossier, "Installation faite", {
+      lead, coLead, business, notes
+    });
+    showToast(
+      factionId
+        ? `Faction créée ! <a href="/faction-detail.html?id=${factionId}" style="color:#22c55e;text-decoration:underline">Voir la faction →</a>`
+        : "Faction créée.",
+      "success"
+    );
+  } catch (err) {
+    showToast("Erreur lors de la création de la faction.", "error"); console.error(err);
   }
 }
+
+// ── Votes ─────────────────────────────────────────────────────
 
 window.handleVote = async (id, direction) => {
   const d = allDossiers.find(x => x.id === id);
@@ -314,49 +404,62 @@ window.handleVote = async (id, direction) => {
   }
 };
 
-window.handleValiderEntretien = async (id) => {
-  const ok = await confirmModal("Valider l'entretien ?", "Le dossier passera en <strong>En attente d'installation</strong>.", "Valider");
-  if (!ok) return;
-  try {
-    await validerEntretien(id);
-    showToast("Entretien validé.", "success");
-  } catch (err) {
-    showToast("Erreur.", "error"); console.error(err);
-  }
-};
+// ── Création dossier ──────────────────────────────────────────
 
-window.handleValiderInstallation = async (id) => {
-  const d  = allDossiers.find(x => x.id === id);
-  if (!d) return;
-  const ok = await confirmModal(
-    "Créer la faction ?",
-    `La faction <strong>${esc(d.nomGroupe)}</strong> sera automatiquement créée dans l'onglet Factions.`,
-    "Créer la faction"
+async function handleCreate(ev) {
+  ev.preventDefault();
+  const nomGroupe      = document.getElementById("d-nom").value.trim();
+  const typeGroupe     = document.getElementById("d-type").value;
+  const lienDossier    = document.getElementById("d-lien").value.trim();
+  const description    = document.getElementById("d-desc").value.trim();
+  const voteDeadline   = document.getElementById("d-deadline")?.value || null;
+  const contactName    = document.getElementById("d-contact-name").value.trim();
+  const contactDiscord = document.getElementById("d-contact-discord").value.trim();
+
+  if (!nomGroupe || !typeGroupe || !lienDossier || !contactName) {
+    showToast("Remplis tous les champs obligatoires.", "error"); return;
+  }
+
+  // Détection re-soumission
+  const refused  = allDossiers.filter(d => d.statut === "Refusé" && d.archived);
+  const nomLower = nomGroupe.toLowerCase();
+  const match    = refused.find(d =>
+    d.nomGroupe?.toLowerCase() === nomLower ||
+    (contactDiscord && d.contactDiscord && d.contactDiscord.toLowerCase() === contactDiscord.toLowerCase())
   );
-  if (!ok) return;
-  try {
-    const factionId = await validerInstallation(id, d);
-    showToast(`Faction créée ! <a href="/faction-detail.html?id=${factionId}" style="color:#22c55e;text-decoration:underline">Voir la faction →</a>`, "success");
-  } catch (err) {
-    showToast("Erreur.", "error"); console.error(err);
+  if (match) {
+    const warning = `
+      ⚠️ Ce groupe ou ce contact a déjà été refusé.<br>
+      <strong>Motif :</strong> ${match.refusalReason || "Non précisé"}<br>
+      <strong>Refusé le :</strong> ${formatDate(match.archivedAt)}<br><br>
+      Veux-tu quand même créer ce dossier ?`;
+    const ok = await confirmModal("Dossier déjà refusé", warning, "Créer quand même");
+    if (!ok) return;
   }
-};
 
-window.handleRefuser = async (id) => {
-  const d = allDossiers.find(x => x.id === id);
-  if (!d) return;
-  const result = await promptReason("❌ Motif de refus", "Ex : Manque de cohérence RP, groupe déjà existant…");
-  if (!result.ok) return;
+  const btn = document.getElementById("d-submit");
+  btn.disabled = true; btn.textContent = "Création…";
+
   try {
-    await refuserDossier(id, d, result.reason);
-    showToast("Dossier refusé et archivé.", "success");
+    await createDossier({ nomGroupe, typeGroupe, lienDossier, description, voteDeadline, contactName, contactDiscord });
+    showToast("Dossier créé.", "success");
+    // Fermer le modal création
+    document.getElementById("dossier-modal").style.display   = "none";
+    document.getElementById("dossier-modal-overlay").style.display = "none";
+    document.getElementById("dossier-form").reset();
   } catch (err) {
-    showToast("Erreur.", "error"); console.error(err);
+    showToast("Erreur lors de la création.", "error"); console.error(err);
+  } finally {
+    btn.disabled = false; btn.textContent = "Créer le dossier";
   }
-};
+}
 
-window.handleDeleteDossier = async (id, nom) => {
-  const ok = await confirmModal("Supprimer", `Supprimer définitivement <strong>${nom}</strong> ?`, "Supprimer");
+// ── Suppression ───────────────────────────────────────────────
+
+window.handleDeleteDossier = async (id) => {
+  const d   = allDossiers.find(x => x.id === id);
+  const nom = d?.nomGroupe || id;
+  const ok  = await confirmModal("Supprimer", `Supprimer définitivement <strong>${esc(nom)}</strong> ?`, "Supprimer");
   if (!ok) return;
   try {
     await deleteDossier(id);
@@ -366,49 +469,11 @@ window.handleDeleteDossier = async (id, nom) => {
   }
 };
 
-const ALL_STATUTS = [
-  "En attente d'étude",
-  "En attente d'entretien",
-  "En attente d'installation"
-];
-
-function manualControlHtml(id, currentStatut) {
-  const targets = ALL_STATUTS.filter(s => s !== currentStatut);
-  return `
-    <details class="manual-ctrl" style="margin-top:10px">
-      <summary>⚙ Contrôle manuel du statut</summary>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-        ${targets.map(s => `
-          <button class="btn btn-sm" style="font-size:.75rem;background:var(--bg-surface)"
-            onclick="handleSetStatut('${id}','${s}')">
-            Passer à : <em>${s}</em>
-          </button>`).join("")}
-        <button class="btn btn-sm" style="font-size:.75rem;background:var(--s-refused-bg);color:var(--s-refused)"
-          onclick="handleRefuser('${id}')">
-          ❌ Refuser (archiver)
-        </button>
-      </div>
-    </details>`;
-}
-
-window.handleSetStatut = async (id, statut) => {
-  const ok = await confirmModal(
-    "Modifier le statut manuellement",
-    `Passer ce dossier en <strong>${statut}</strong> ?<br><small style="color:var(--text-muted)">Cette action ignore le workflow automatique.</small>`,
-    "Confirmer"
-  );
-  if (!ok) return;
-  try {
-    await setDossierStatut(id, statut);
-    showToast("Statut mis à jour.", "success");
-  } catch (err) {
-    showToast("Erreur.", "error"); console.error(err);
-  }
-};
+// ── Utilitaire ────────────────────────────────────────────────
 
 function esc(str) {
   if (!str) return "";
   return String(str)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/'/g, "\\'");
+    .replace(/"/g, "&quot;");
 }

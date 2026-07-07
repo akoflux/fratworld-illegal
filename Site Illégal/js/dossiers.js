@@ -1,7 +1,7 @@
 import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
-import { sendDossierNotification } from "./discord.js";
+import { sendDossierNotification, sendDossierStatusChange } from "./discord.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, query, orderBy, onSnapshot, serverTimestamp,
@@ -95,19 +95,17 @@ export async function voteDossier(id, dossier, direction, reason = "") {
 
   if (thresholdJustReached) updates.statut = "En attente d'entretien";
 
-
   await updateDoc(doc(db, "dossiers", id), updates);
 
   if (thresholdJustReached) {
-    await sendDossierNotification(
-      "dossier_threshold",
+    await sendDossierStatusChange(
+      "En attente d'entretien",
       {
         id, ...dossier,
-        votesFor:    direction === "for" ? [...votesFor, uid] : votesFor.filter(u => u !== uid),
+        votesFor:     direction === "for" ? [...votesFor, uid] : votesFor.filter(u => u !== uid),
         votesAgainst: direction === "against" ? [...votesAgainst, uid] : votesAgainst.filter(u => u !== uid),
         statut: "En attente d'entretien"
-      },
-      votesNeeded
+      }
     );
   }
 }
@@ -177,7 +175,60 @@ export async function refuserDossier(id, dossier, reason) {
   await sendDossierNotification("dossier_archive", { id, ...dossier, statut: "Refusé" }, votesNeeded);
 }
 
-// Contrôle manuel : forcer un statut sans passer par le workflow automatique
+// Changement de statut via badge cliquable — gère workflow + Discord
+export async function changerStatutDossier(id, dossier, newStatut, extraData = {}) {
+  const { uid, name } = authorInfo();
+
+  const updates = {
+    statut:    newStatut,
+    updatedAt: serverTimestamp(),
+    updatedBy: name
+  };
+
+  let factionId = null;
+
+  if (newStatut === "Installation faite") {
+    const factionRef = await addDoc(collection(db, "factions"), {
+      nom:            dossier.nomGroupe,
+      type:           dossier.typeGroupe,
+      statut:         "Actif",
+      lead:           extraData.lead    || dossier.contactName || "",
+      coLead:         extraData.coLead  || "",
+      business:       extraData.business || "",
+      notes:          extraData.notes   || "",
+      dernierContact: null,
+      actif:          true,
+      leadHistory:    [],
+      authorUid:      uid,
+      authorName:     name,
+      createdAt:      serverTimestamp(),
+      updatedAt:      serverTimestamp(),
+      updatedBy:      name
+    });
+    updates.archived   = true;
+    updates.archivedAt = serverTimestamp();
+    updates.archivedBy = name;
+    updates.factionId  = factionRef.id;
+    factionId = factionRef.id;
+  }
+
+  if (newStatut === "Refusé") {
+    updates.archived      = true;
+    updates.archivedAt    = serverTimestamp();
+    updates.archivedBy    = name;
+    updates.refusalReason = extraData.reason || "";
+  }
+
+  await updateDoc(doc(db, "dossiers", id), updates);
+  await sendDossierStatusChange(newStatut, {
+    id, ...dossier,
+    refusalReason: extraData.reason || dossier.refusalReason || ""
+  });
+
+  return factionId;
+}
+
+// Contrôle manuel bas niveau (conservé pour compat)
 export async function setDossierStatut(id, statut) {
   const { name } = authorInfo();
   await updateDoc(doc(db, "dossiers", id), {

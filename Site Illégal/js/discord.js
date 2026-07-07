@@ -65,51 +65,47 @@ function fmtVoteCount(arr) {
 // ── Dossiers ──────────────────────────────────────────────────
 
 // type : "dossier_create" | "dossier_threshold" | "dossier_archive"
-// dossier : { id, nomGroupe, typeGroupe, description, authorName, votes, statut, lienDossier }
 export async function sendDossierNotification(type, dossier, votesNeeded) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("VOTRE_WEBHOOK_ICI")) return;
 
   const url    = `${SITE_URL}/dossiers.html`;
-  const roleId = getDossierRoleId(dossier.typeGroupe);
-  let title, description, color, fields, mentionRole = true; // toujours mentionner le bon gestionnaire
+  // Création → tout le staff ; threshold/archive → gestionnaire du type
+  const roleId = (type === "dossier_create") ? GESTIONNAIRE_ROLE_ID : getDossierRoleId(dossier.typeGroupe);
 
-  // Backward compat : anciens docs n'ont que `votes`
   const voteForCount     = dossier.votesFor?.length ?? dossier.votes?.length ?? 0;
   const voteAgainstCount = dossier.votesAgainst?.length ?? 0;
 
+  let title, description, color, fields;
+
   if (type === "dossier_create") {
-    color       = 0x4f86f7;
-    title       = `📂 Nouveau dossier — ${dossier.nomGroupe}`;
-    description = `**${dossier.authorName}** a soumis un dossier de candidature.`;
+    color       = 0xef4444;
+    title       = `⚡ Vote URGENT — ${dossier.nomGroupe}`;
+    description = `**${dossier.authorName}** a soumis un dossier de candidature.\n@everyone Votez dès que possible !`;
     fields = [
       { name: "Type de groupe", value: dossier.typeGroupe || "—",  inline: true },
-      { name: "Déposé par",     value: dossier.authorName || "—",  inline: true },
+      { name: "Contact",        value: dossier.contactName || dossier.authorName || "—", inline: true },
       { name: "Votes requis",   value: String(votesNeeded ?? "—"), inline: true }
     ];
     if (dossier.voteDeadline) fields.push({ name: "⏰ Deadline", value: fmtDate(dossier.voteDeadline), inline: true });
     if (dossier.description)  fields.push({ name: "Description", value: dossier.description.slice(0, 150), inline: false });
-    if (dossier.lienDossier)  fields.push({ name: "🔗 Dossier",  value: dossier.lienDossier,               inline: false });
+    if (dossier.lienDossier)  fields.push({ name: "🔗 Dossier",  value: dossier.lienDossier, inline: false });
 
   } else if (type === "dossier_threshold") {
     color       = 0xeab308;
     title       = `🗳️ Seuil de votes atteint — ${dossier.nomGroupe}`;
     description = `Le dossier a reçu **${voteForCount}/${votesNeeded}** votes favorables.\nUn gestionnaire doit planifier l'entretien.`;
     fields = [
-      { name: "Type de groupe", value: dossier.typeGroupe || "—",            inline: true },
-      { name: "Statut",         value: dossier.statut    || "—",            inline: true },
-      { name: "👍 Pour",        value: `${voteForCount}/${votesNeeded}`,     inline: true },
-      { name: "👎 Contre",      value: String(voteAgainstCount),             inline: true }
+      { name: "Type de groupe", value: dossier.typeGroupe || "—",        inline: true },
+      { name: "👍 Pour",        value: `${voteForCount}/${votesNeeded}`, inline: true },
+      { name: "👎 Contre",      value: String(voteAgainstCount),         inline: true }
     ];
     if (dossier.lienDossier) fields.push({ name: "🔗 Dossier", value: dossier.lienDossier, inline: false });
 
-  } else if (type === "dossier_archive") {
-    const isValid = dossier.statut === "Validé";
-    mentionRole   = isValid;
+  } else {
+    const isValid = dossier.statut === "Validé" || dossier.statut === "Faction créée";
     color         = isValid ? 0x22c55e : 0xef4444;
     title         = `${isValid ? "✅" : "❌"} Dossier ${dossier.statut} — ${dossier.nomGroupe}`;
-    description   = isValid
-      ? `Le dossier a été **validé**. La faction peut être intégrée.`
-      : `Le dossier a été **refusé**.`;
+    description   = isValid ? `Le dossier a été **validé**. La faction peut être intégrée.` : `Le dossier a été **refusé**.`;
     fields = [
       { name: "Type de groupe", value: dossier.typeGroupe || "—", inline: true },
       { name: "Décision",       value: dossier.statut    || "—", inline: true },
@@ -137,6 +133,81 @@ export async function sendDossierNotification(type, dossier, votesNeeded) {
     if (!res.ok) console.warn("Discord dossier webhook HTTP", res.status);
   } catch (err) {
     console.error("Erreur webhook Discord dossier :", err);
+  }
+}
+
+// Notification par changement de statut (badge cliquable)
+export async function sendDossierStatusChange(newStatut, dossier) {
+  if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("VOTRE_WEBHOOK_ICI")) return;
+
+  const url = `${SITE_URL}/dossiers.html`;
+  const voteForCount     = dossier.votesFor?.length ?? dossier.votes?.length ?? 0;
+  const voteAgainstCount = dossier.votesAgainst?.length ?? 0;
+
+  const CONF = {
+    "En attente d'étude": {
+      roleId: GESTIONNAIRE_ROLE_ID,
+      color:  0xef4444,
+      title:  `⚡ Vote URGENT — ${dossier.nomGroupe}`,
+      desc:   `Le dossier est en attente d'étude. Votez dès que possible !`
+    },
+    "En attente d'entretien": {
+      roleId: getDossierRoleId(dossier.typeGroupe),
+      color:  0xeab308,
+      title:  `🗓 Entretien à planifier — ${dossier.nomGroupe}`,
+      desc:   `Le dossier a obtenu les votes nécessaires. Planifiez l'entretien.`
+    },
+    "En attente d'installation": {
+      roleId: GESTIONNAIRE_ROLE_ID,
+      color:  0x60a5fa,
+      title:  `🔧 Installation en attente — ${dossier.nomGroupe}`,
+      desc:   `L'entretien a été validé. La faction attend d'être installée sur le serveur.`
+    },
+    "Installation faite": {
+      roleId: GESTIONNAIRE_ROLE_ID,
+      color:  0x22c55e,
+      title:  `✅ Faction installée — ${dossier.nomGroupe}`,
+      desc:   `La faction a été officiellement installée et ajoutée à la liste des factions.`
+    },
+    "Refusé": {
+      roleId: null,
+      color:  0xef4444,
+      title:  `❌ Dossier refusé — ${dossier.nomGroupe}`,
+      desc:   `Le dossier a été refusé.${dossier.refusalReason ? ` Motif : ${dossier.refusalReason}` : ""}`
+    }
+  };
+
+  const cfg = CONF[newStatut];
+  if (!cfg) return;
+
+  const fields = [
+    { name: "Type",    value: dossier.typeGroupe || "—",                             inline: true },
+    { name: "Contact", value: dossier.contactName || dossier.authorName || "—",      inline: true },
+    { name: "👍 Pour", value: `${voteForCount}`,                                     inline: true },
+    { name: "👎 Contre", value: `${voteAgainstCount}`,                               inline: true }
+  ];
+  if (dossier.lienDossier) fields.push({ name: "🔗 Dossier", value: dossier.lienDossier, inline: false });
+
+  const payload = {
+    content: cfg.roleId ? `<@&${cfg.roleId}>` : undefined,
+    embeds: [{
+      title: cfg.title, description: cfg.desc, color: cfg.color,
+      url, fields,
+      footer:    { text: "FratWorld RP — Staff Illégal · Dossiers" },
+      timestamp: new Date().toISOString()
+    }]
+  };
+  if (!payload.content) delete payload.content;
+
+  try {
+    const res = await fetch(DISCORD_WEBHOOK_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(payload)
+    });
+    if (!res.ok) console.warn("Discord statut dossier webhook HTTP", res.status);
+  } catch (err) {
+    console.error("Erreur webhook Discord statut dossier :", err);
   }
 }
 
