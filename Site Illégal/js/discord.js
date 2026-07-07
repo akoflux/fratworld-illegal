@@ -1,7 +1,19 @@
 import { DISCORD_WEBHOOK_URL, SITE_URL } from "../config.js";
 
-// ID du rôle gestionnaire — mentionné sur les notifs critiques
+// Rôle gestionnaire global (fallback)
 const GESTIONNAIRE_ROLE_ID = "1486124849159209152";
+
+// Rôles gestionnaire par type de faction
+const DOSSIER_ROLE_IDS = {
+  "Gang":                 "1523264159695769701",
+  "MC / Groupe atypique": "1523264369171890176",
+  "Mafia":                "1523264657257926706",
+  "Cartel":               "1523264657257926706"
+};
+
+function getDossierRoleId(typeGroupe) {
+  return DOSSIER_ROLE_IDS[typeGroupe] || GESTIONNAIRE_ROLE_ID;
+}
 
 const STATUS_COLORS = {
   "Validé":     0x22c55e,
@@ -57,8 +69,9 @@ function fmtVoteCount(arr) {
 export async function sendDossierNotification(type, dossier, votesNeeded) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("VOTRE_WEBHOOK_ICI")) return;
 
-  const url = `${SITE_URL}/dossiers.html`;
-  let title, description, color, fields, mentionRole = false;
+  const url    = `${SITE_URL}/dossiers.html`;
+  const roleId = getDossierRoleId(dossier.typeGroupe);
+  let title, description, color, fields, mentionRole = true; // toujours mentionner le bon gestionnaire
 
   // Backward compat : anciens docs n'ont que `votes`
   const voteForCount     = dossier.votesFor?.length ?? dossier.votes?.length ?? 0;
@@ -78,7 +91,6 @@ export async function sendDossierNotification(type, dossier, votesNeeded) {
     if (dossier.lienDossier)  fields.push({ name: "🔗 Dossier",  value: dossier.lienDossier,               inline: false });
 
   } else if (type === "dossier_threshold") {
-    mentionRole = true;
     color       = 0xeab308;
     title       = `🗳️ Seuil de votes atteint — ${dossier.nomGroupe}`;
     description = `Le dossier a reçu **${voteForCount}/${votesNeeded}** votes favorables.\nUn gestionnaire doit planifier l'entretien.`;
@@ -108,14 +120,13 @@ export async function sendDossierNotification(type, dossier, votesNeeded) {
   }
 
   const payload = {
-    content: mentionRole ? `<@&${GESTIONNAIRE_ROLE_ID}>` : undefined,
+    content: `<@&${roleId}>`,
     embeds: [{
       title, description, color, url, fields,
       footer:    { text: "FratWorld RP — Staff Illégal · Dossiers" },
       timestamp: new Date().toISOString()
     }]
   };
-  if (!payload.content) delete payload.content;
 
   try {
     const res = await fetch(DISCORD_WEBHOOK_URL, {

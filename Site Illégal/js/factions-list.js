@@ -95,6 +95,16 @@ export async function getFactionNames() {
   }
 }
 
+export async function getFaction(id) {
+  try {
+    const snap = await getDoc(doc(db, "factions", id));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  } catch (err) {
+    console.warn("getFaction fallback:", err.message);
+    return null;
+  }
+}
+
 // Retourne [{id, nom, type}] pour les selects relation/agenda
 export async function getFactionList() {
   try {

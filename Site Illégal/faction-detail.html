@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Membres Faction — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+  <div id="navbar"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <a href="/factions.html" class="btn btn-secondary btn-sm" style="margin-bottom:10px">← Factions</a>
+        <h1 id="faction-nom" style="margin-bottom:4px">—</h1>
+        <p id="faction-meta" class="page-subtitle"></p>
+      </div>
+      <div id="faction-header-actions" style="display:flex;gap:8px;align-items:flex-end"></div>
+    </div>
+
+    <!-- Infos faction -->
+    <div class="detail-card" style="margin-bottom:20px">
+      <div class="card-header-bar"><h3>Informations</h3></div>
+      <div class="card-content" id="faction-info-body">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Membres -->
+    <div class="detail-card">
+      <div class="card-header-bar">
+        <h3>Membres <span id="membre-count" style="font-size:.75rem;font-weight:400;color:var(--text-muted)"></span></h3>
+        <div style="display:flex;gap:8px" id="membre-actions"></div>
+      </div>
+      <div id="membres-body">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Overlay modal -->
+<div class="modal-overlay" id="membre-modal-overlay" style="display:none"></div>
+
+<!-- Modal ajouter/modifier membre -->
+<div id="membre-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;width:100%;max-width:460px;padding:20px">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 id="membre-modal-title" style="margin-bottom:20px;font-size:1.1rem">Ajouter un membre</h2>
+    <form id="membre-form">
+      <div class="form-group">
+        <label>Pseudo <span class="required">*</span></label>
+        <input id="m-pseudo" type="text" class="form-control" placeholder="Ex : Shadowbane" required />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>ID CFX</label>
+          <input id="m-cfx" type="text" class="form-control" placeholder="Ex : 123456" />
+        </div>
+        <div class="form-group">
+          <label>ID Joueur</label>
+          <input id="m-joueur" type="text" class="form-control" placeholder="Ex : 42" />
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>Rôle dans la faction</label>
+          <select id="m-role" class="form-control">
+            <option value="Membre">Membre</option>
+            <option value="Sous-chef">Sous-chef</option>
+            <option value="Chef">Chef</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select id="m-statut" class="form-control">
+            <option value="Actif">Actif</option>
+            <option value="Inactif">Inactif</option>
+            <option value="Banni">Banni</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="membre-cancel-btn" class="btn btn-secondary">Annuler</button>
+        <button type="submit"  id="membre-submit-btn" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/js/page-faction-detail.js"></script>
+</body>
+</html>

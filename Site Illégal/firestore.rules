@@ -75,6 +75,13 @@ service cloud.firestore {
       allow create: if isReferentOrAdmin();
       allow update: if isReferentOrAdmin();
       allow delete: if isAdmin();
+
+      match /membres/{membreId} {
+        allow read:   if isAuthenticated();
+        allow create: if isReferentOrAdmin();
+        allow update: if isReferentOrAdmin();
+        allow delete: if isReferentOrAdmin();
+      }
     }
 
     // ── communiqués ────────────────────────────────────────────

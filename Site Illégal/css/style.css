@@ -2767,6 +2767,35 @@ mark.hl {
   color: var(--text-primary);
 }
 
+/* ── Tableau membres faction ─────────────────────────────────── */
+.membre-table-wrap {
+  overflow-x: auto;
+}
+.membre-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+}
+.membre-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.membre-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+  vertical-align: middle;
+}
+.membre-table tr:last-child td { border-bottom: none; }
+.membre-table tr:hover td      { background: var(--bg-hover, var(--bg-input)); }
+.membre-pseudo { font-weight: 600; color: var(--text-primary); }
+.membre-id     { font-family: 'JetBrains Mono', monospace; font-size: .78rem; color: var(--text-secondary); }
+
 .relation-sep {
   font-weight: 900;
   font-size: 1.1rem;

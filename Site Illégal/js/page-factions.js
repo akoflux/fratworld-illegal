@@ -79,6 +79,7 @@ function factionCard(f) {
         </div>
         <div style="display:flex;gap:6px">
           ${hasHistory ? `<button class="btn-icon" title="Historique leads" onclick="showLeadHistory('${f.id}')">📋</button>` : ""}
+          <a href="/faction-detail.html?id=${f.id}" class="btn-icon" title="Voir membres" style="text-decoration:none">👥</a>
           ${!isSpectateur() ? `<button class="btn-icon" title="Modifier" onclick="openEditModal('${f.id}')">✎</button>` : ""}
           ${admin ? `<button class="btn-icon danger" title="Supprimer" onclick="handleDeleteFaction('${f.id}','${esc(f.nom)}')">✕</button>` : ""}
         </div>
