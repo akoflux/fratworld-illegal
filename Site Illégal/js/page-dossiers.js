@@ -415,6 +415,7 @@ async function handleCreate(ev) {
   const voteDeadline   = document.getElementById("d-deadline")?.value || null;
   const contactName    = document.getElementById("d-contact-name").value.trim();
   const contactDiscord = document.getElementById("d-contact-discord").value.trim();
+  const mentionStaff   = document.getElementById("d-mention-staff")?.checked ?? true;
 
   if (!nomGroupe || !typeGroupe || !lienDossier || !contactName) {
     showToast("Remplis tous les champs obligatoires.", "error"); return;
@@ -441,7 +442,7 @@ async function handleCreate(ev) {
   btn.disabled = true; btn.textContent = "Création…";
 
   try {
-    await createDossier({ nomGroupe, typeGroupe, lienDossier, description, voteDeadline, contactName, contactDiscord });
+    await createDossier({ nomGroupe, typeGroupe, lienDossier, description, voteDeadline, contactName, contactDiscord, mentionStaff });
     showToast("Dossier créé.", "success");
     // Fermer le modal création
     document.getElementById("dossier-modal").style.display   = "none";

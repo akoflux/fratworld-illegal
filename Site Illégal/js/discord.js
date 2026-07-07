@@ -65,7 +65,7 @@ function fmtVoteCount(arr) {
 // ── Dossiers ──────────────────────────────────────────────────
 
 // type : "dossier_create" | "dossier_threshold" | "dossier_archive"
-export async function sendDossierNotification(type, dossier, votesNeeded) {
+export async function sendDossierNotification(type, dossier, votesNeeded, mentionStaff = true) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("VOTRE_WEBHOOK_ICI")) return;
 
   const url    = `${SITE_URL}/dossiers.html`;
@@ -115,8 +115,9 @@ export async function sendDossierNotification(type, dossier, votesNeeded) {
     if (dossier.lienDossier) fields.push({ name: "🔗 Dossier", value: dossier.lienDossier, inline: false });
   }
 
+  const shouldMention = type === "dossier_create" ? mentionStaff : true;
   const payload = {
-    content: `<@&${roleId}>`,
+    ...(shouldMention ? { content: `<@&${roleId}>` } : {}),
     embeds: [{
       title, description, color, url, fields,
       footer:    { text: "FratWorld RP — Staff Illégal · Dossiers" },

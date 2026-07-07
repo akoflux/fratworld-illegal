@@ -90,6 +90,14 @@
         <input id="d-deadline" type="datetime-local" class="form-control" />
         <span class="form-hint">Si définie, les votes seront clôturés après cette date.</span>
       </div>
+      <div class="form-group">
+        <label class="toggle-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
+          <input type="checkbox" id="d-mention-staff" checked
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0" />
+          <span style="font-size:.88rem;font-weight:600;color:var(--text-secondary)">Mentionner les gestionnaires Discord</span>
+        </label>
+        <span class="form-hint" style="margin-left:26px">Si coché, le webhook Discord pingue les gestionnaires à la création du dossier.</span>
+      </div>
       <div class="form-actions">
         <button type="button" id="modal-cancel-btn" class="btn btn-secondary">Annuler</button>
         <button type="submit" id="d-submit" class="btn btn-primary">Créer le dossier</button>

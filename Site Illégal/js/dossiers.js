@@ -40,7 +40,7 @@ export async function createDossier(data) {
   };
 
   const ref = await addDoc(collection(db, "dossiers"), payload);
-  await sendDossierNotification("dossier_create", { id: ref.id, ...payload, authorName: name }, votesNeeded);
+  await sendDossierNotification("dossier_create", { id: ref.id, ...payload, authorName: name }, votesNeeded, data.mentionStaff !== false);
   return ref;
 }
 
