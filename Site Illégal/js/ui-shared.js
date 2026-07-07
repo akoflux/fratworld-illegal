@@ -3,19 +3,40 @@ import { logout, getCurrentUserData, isAdmin } from "./auth.js";
 // ── Navbar ────────────────────────────────────────────────────
 
 const NAV_LINKS = [
-  { href: "/index.html",        label: "Accueil",     key: "dashboard"  },
-  { href: "/entries.html",      label: "Décisions",   key: "decisions"  },
-  { href: "/factions.html",     label: "Factions",    key: "factions"   },
-  { href: "/dossiers.html",     label: "Dossiers",    key: "dossiers"   },
-  { href: "/entries.html?section=propositions", label: "Propositions", key: "propositions" },
-  { href: "/relations.html",    label: "Relations",   key: "relations"  },
-  { href: "/map.html",          label: "Carte",       key: "map"        },
-  { href: "/tasks.html",        label: "Tâches",      key: "tasks"      },
-  { href: "/agenda.html",       label: "Agenda",      key: "agenda"     },
-  { href: "/documents.html",    label: "Documents",   key: "documents"  },
-  { href: "/reglement.html",    label: "Règlement",   key: "reglement"  },
-  { href: "/communique.html",   label: "Communiqué",  key: "communique" },
-  { href: "/admin-users.html",  label: "Admin",       key: "admin", adminOnly: true }
+  { href: "/index.html", label: "Accueil", key: "dashboard" },
+  {
+    group: "Décisions", key: "g-decisions",
+    children: [
+      { href: "/entries.html",                      label: "Décisions",    key: "decisions"    },
+      { href: "/entries.html?section=propositions", label: "Propositions", key: "propositions" },
+      { href: "/dossiers.html",                     label: "Dossiers",     key: "dossiers"     }
+    ]
+  },
+  {
+    group: "Organisation", key: "g-org",
+    children: [
+      { href: "/factions.html",  label: "Factions",  key: "factions"  },
+      { href: "/relations.html", label: "Relations",  key: "relations" },
+      { href: "/tasks.html",     label: "Tâches",     key: "tasks"     },
+      { href: "/agenda.html",    label: "Agenda",     key: "agenda"    }
+    ]
+  },
+  {
+    group: "Ressources", key: "g-ressources",
+    children: [
+      { href: "/documents.html",  label: "Documents",  key: "documents"  },
+      { href: "/reglement.html",  label: "Règlement",  key: "reglement"  },
+      { href: "/communique.html", label: "Communiqué", key: "communique" }
+    ]
+  },
+  {
+    group: "Outils", key: "g-outils",
+    children: [
+      { href: "/map.html",              label: "Carte GTA",        key: "map"              },
+      { href: "/ticket-fermeture.html", label: "Timestamp ticket", key: "ticket-fermeture" }
+    ]
+  },
+  { href: "/admin-users.html", label: "Admin", key: "admin", adminOnly: true }
 ];
 
 export function renderNavbar(activePage) {
@@ -29,14 +50,36 @@ export function renderNavbar(activePage) {
 
   const visibleLinks = NAV_LINKS.filter(l => !l.adminOnly || adminUser);
 
-  const linksHtml       = visibleLinks.map(l => `
-    <a href="${l.href}" class="nav-link ${activePage === l.key ? "active" : ""}">${l.label}</a>
-  `).join("");
+  // ── Desktop : liens directs + dropdowns ───────────────────────
+  const linksHtml = visibleLinks.map(item => {
+    if (item.group) {
+      const isGroupActive = item.children.some(c => c.key === activePage);
+      const menuHtml = item.children.map(c => `
+        <a href="${c.href}" class="nav-dropdown-item ${activePage === c.key ? "active" : ""}">${c.label}</a>
+      `).join("");
+      return `
+        <div class="nav-dropdown">
+          <button class="nav-dropdown-btn ${isGroupActive ? "active" : ""}">
+            ${item.group} <span class="nav-chevron">▾</span>
+          </button>
+          <div class="nav-dropdown-menu">${menuHtml}</div>
+        </div>`;
+    }
+    return `<a href="${item.href}" class="nav-link ${activePage === item.key ? "active" : ""}">${item.label}</a>`;
+  }).join("");
 
-  const mobileLinksHtml = visibleLinks.map(l => `
-    <a href="${l.href}" class="nav-link ${activePage === l.key ? "active" : ""}"
-       style="font-size:.9rem;padding:9px 12px">${l.label}</a>
-  `).join("");
+  // ── Mobile : liste plate avec séparateurs de groupes ──────────
+  const mobileLinksHtml = visibleLinks.map(item => {
+    if (item.group) {
+      const childLinks = item.children.map(c => `
+        <a href="${c.href}" class="nav-link ${activePage === c.key ? "active" : ""}"
+           style="font-size:.88rem;padding:7px 12px 7px 22px">→ ${c.label}</a>
+      `).join("");
+      return `<div class="mobile-nav-group-label">${item.group}</div>${childLinks}`;
+    }
+    return `<a href="${item.href}" class="nav-link ${activePage === item.key ? "active" : ""}"
+               style="font-size:.9rem;padding:9px 12px">${item.label}</a>`;
+  }).join("");
 
   document.getElementById("navbar").innerHTML = `
     <nav class="navbar">
@@ -82,7 +125,6 @@ export function renderNavbar(activePage) {
     window.location.href = "/agenda.html";
   });
 
-  // Créer l'overlay de recherche (une seule fois)
   if (!document.getElementById("fw-search-overlay")) initSearchOverlay();
 
   const hamburger = document.getElementById("hamburger-btn");
@@ -98,6 +140,20 @@ export function renderNavbar(activePage) {
   hamburger.addEventListener("click", () => toggleMenu(!panel.classList.contains("open")));
   overlay.addEventListener("click",   () => toggleMenu(false));
   logoutMob?.addEventListener("click", () => logout());
+
+  // Dropdown : clic pour ouvrir/fermer (support tactile + clavier)
+  document.querySelectorAll(".nav-dropdown-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const dd     = btn.closest(".nav-dropdown");
+      const isOpen = dd.classList.contains("open");
+      document.querySelectorAll(".nav-dropdown").forEach(d => d.classList.remove("open"));
+      if (!isOpen) dd.classList.add("open");
+    });
+  });
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".nav-dropdown").forEach(d => d.classList.remove("open"));
+  });
 }
 
 // ── Search overlay ────────────────────────────────────────────

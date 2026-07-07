@@ -272,6 +272,81 @@ h3 { font-size: 1.05rem; font-weight: 600; }
 .nav-mobile-panel.open,
 .nav-mobile-overlay.open { display: flex; }
 
+/* ── Nav dropdowns ───────────────────────────────────────────── */
+.nav-dropdown {
+  position: relative;
+}
+.nav-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.nav-dropdown-btn:hover,
+.nav-dropdown-btn.active { background: var(--bg-card); color: var(--text-primary); }
+.nav-dropdown-btn.active  { color: var(--accent); }
+.nav-chevron {
+  font-size: .6rem;
+  transition: transform .2s;
+  display: inline-block;
+}
+.nav-dropdown:hover .nav-chevron,
+.nav-dropdown.open  .nav-chevron { transform: rotate(180deg); }
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 5px;
+  min-width: 175px;
+  z-index: 300;
+  box-shadow: 0 10px 28px rgba(0,0,0,.4);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity .15s, transform .15s;
+}
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown.open  .nav-dropdown-menu {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+.nav-dropdown-item {
+  display: block;
+  padding: 7px 11px;
+  border-radius: 7px;
+  font-size: .84rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background .1s, color .1s;
+}
+.nav-dropdown-item:hover  { background: var(--bg-hover, var(--bg-input)); color: var(--text-primary); text-decoration: none; }
+.nav-dropdown-item.active { color: var(--accent); font-weight: 600; }
+
+/* Mobile group labels */
+.mobile-nav-group-label {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  padding: 10px 12px 4px;
+}
+
 /* ── Buttons ─────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
