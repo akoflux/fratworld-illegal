@@ -1876,27 +1876,27 @@ mark.hl {
 }
 
 .communique-doc {
-  background: #fff;
-  color: #111;
+  background: #12141c;
+  color: #e0e0e0;
   border-radius: var(--r-md);
   overflow: hidden;
-  min-height: 580px;
-  font-family: 'Times New Roman', Georgia, serif;
+  min-height: 600px;
+  font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
   font-size: 13px;
-  line-height: 1.75;
-  box-shadow: 0 8px 32px rgba(0,0,0,.22);
-  border: 1px solid #d4a080;
+  line-height: 1.85;
+  box-shadow: 0 12px 48px rgba(0,0,0,.65), 0 0 0 1px rgba(194,65,12,.22);
+  border: 1px solid rgba(194,65,12,.28);
 }
 
-/* En-tête orange */
+/* En-tête sombre */
 .communique-doc-brand {
-  background: linear-gradient(135deg, #7c1a0a 0%, #c2410c 100%);
+  background: linear-gradient(135deg, #0b0d14 0%, #191c28 100%);
   color: #fff;
-  padding: 18px 26px;
+  padding: 20px 26px;
   display: flex;
   align-items: center;
   gap: 14px;
-  border-bottom: 3px solid #9a3412;
+  border-bottom: 2px solid #c2410c;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -1904,8 +1904,8 @@ mark.hl {
 .communique-doc-brand-logo {
   width: 48px;
   height: 48px;
-  background: #fff;
-  border: 2px solid rgba(255,255,255,.6);
+  background: rgba(255,255,255,.07);
+  border: 1.5px solid rgba(255,255,255,.18);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -1925,72 +1925,74 @@ mark.hl {
 
 .communique-doc-brand-title {
   font-size: 15px;
-  font-weight: 900;
-  letter-spacing: .14em;
+  font-weight: 700;
+  letter-spacing: .16em;
   color: #fff;
   text-transform: uppercase;
-  margin-bottom: 2px;
-  font-family: Arial, Helvetica, sans-serif;
+  margin-bottom: 3px;
+  font-family: 'Cinzel', Arial, sans-serif;
 }
 
 .communique-doc-brand-sub {
-  font-size: 9.5px;
-  color: rgba(255,255,255,.75);
-  letter-spacing: .08em;
+  font-size: 9px;
+  color: rgba(255,255,255,.48);
+  letter-spacing: .1em;
   text-transform: uppercase;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Cinzel', Arial, sans-serif;
 }
 
 .communique-doc-brand-stamp {
-  font-size: 8.5px;
+  font-size: 7.5px;
   text-transform: uppercase;
-  letter-spacing: .14em;
-  color: rgba(255,255,255,.65);
-  border: 1px solid rgba(255,255,255,.35);
-  padding: 4px 9px;
+  letter-spacing: .18em;
+  color: #d97706;
+  border: 1px solid rgba(217,119,6,.45);
+  padding: 4px 10px;
   border-radius: 3px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Cinzel', Arial, sans-serif;
   flex-shrink: 0;
 }
 
 /* Contenu intérieur */
 .communique-doc-inner {
-  padding: 26px 32px 32px;
+  padding: 28px 34px 36px;
 }
 
 .communique-doc-heading {
   text-align: center;
-  padding-bottom: 14px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid #e8d5cc;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(194,65,12,.3);
 }
 
 .communique-doc-type {
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: .18em;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .24em;
   text-transform: uppercase;
-  color: #c2410c;
-  font-family: Arial, Helvetica, sans-serif;
-  margin-bottom: 4px;
+  color: #d97706;
+  font-family: 'Cinzel', Arial, sans-serif;
+  margin-bottom: 5px;
 }
 
 .communique-doc-ref {
   font-size: 10px;
-  color: #888;
-  letter-spacing: .06em;
-  font-family: Arial, Helvetica, sans-serif;
+  color: rgba(255,255,255,.3);
+  letter-spacing: .07em;
+  font-family: 'Cinzel', Arial, sans-serif;
 }
 
 .communique-doc-meta {
   font-size: 11px;
-  color: #222;
-  border: 1px solid #e0c4b4;
-  border-left: 4px solid #c2410c;
+  color: #c4c4c4;
+  border: 1px solid rgba(194,65,12,.22);
+  border-left: 3px solid #c2410c;
   border-radius: 0 4px 4px 0;
   padding: 10px 14px;
-  margin-bottom: 18px;
-  background: #fef7f3;
+  margin-bottom: 20px;
+  background: rgba(194,65,12,.05);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 .communique-doc-meta-row {
@@ -2004,59 +2006,64 @@ mark.hl {
 .communique-doc-meta-label {
   font-weight: 700;
   min-width: 105px;
-  color: #9a3412;
+  color: #d97706;
 }
 
 .communique-doc-divider {
   border: none;
-  height: 2px;
-  background: linear-gradient(90deg, #c2410c 0%, #fed7aa 55%, transparent 100%);
-  margin: 0 0 18px;
+  height: 1px;
+  background: linear-gradient(90deg, #c2410c 0%, rgba(194,65,12,.28) 60%, transparent 100%);
+  margin: 0 0 20px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 .communique-doc-body {
   font-size: 12.5px;
   white-space: pre-wrap;
   min-height: 140px;
-  color: #1a1a1a;
-  line-height: 1.7;
+  color: #d0d0d0;
+  line-height: 1.9;
   text-align: justify;
 }
 
 .communique-doc-signature {
-  margin-top: 40px;
+  margin-top: 44px;
   text-align: right;
   font-size: 11.5px;
-  border-top: 1px solid #c2410c;
-  padding-top: 12px;
+  border-top: 1px solid rgba(194,65,12,.38);
+  padding-top: 14px;
 }
 
 .communique-doc-signature-name {
   font-weight: 700;
-  font-size: 13px;
-  margin-bottom: 2px;
-  color: #111;
+  font-size: 13.5px;
+  margin-bottom: 3px;
+  color: #fff;
+  font-family: 'Playfair Display', serif;
 }
 
 .communique-doc-signature-role {
-  font-size: 10px;
-  color: #c2410c;
-  letter-spacing: .04em;
+  font-size: 9.5px;
+  color: #d97706;
+  letter-spacing: .07em;
   font-style: italic;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Cinzel', Arial, sans-serif;
 }
 
 .communique-doc-footer {
-  margin-top: 28px;
+  margin-top: 32px;
   padding-top: 14px;
-  border-top: 1px solid #f0e0d8;
+  border-top: 1px solid rgba(194,65,12,.18);
   text-align: center;
 }
 
 .communique-doc-footer-img {
   height: 20px;
-  opacity: .55;
+  opacity: .35;
   display: inline-block;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 /* ── Admin utilisateurs ─────────────────────────────────────── */
@@ -2445,25 +2452,26 @@ mark.hl {
   .page-header              { display: none !important; }
   .communique-doc {
     box-shadow: none !important;
-    border: 1px solid #d4a080 !important;
+    border: 1px solid rgba(194,65,12,.4) !important;
+    background: #12141c !important;
+    color: #e0e0e0 !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
   .communique-doc-brand {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
-    background: linear-gradient(135deg, #7c1a0a 0%, #c2410c 100%) !important;
+    background: linear-gradient(135deg, #0b0d14 0%, #191c28 100%) !important;
   }
   .communique-doc-brand-img,
   .communique-doc-footer-img {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
   }
-  .communique-doc-footer-img { opacity: .7 !important; }
-  .communique-doc-meta {
-    print-color-adjust: exact !important;
-    -webkit-print-color-adjust: exact !important;
-    background: #fef7f3 !important;
-  }
-  .communique-doc-divider {
+  .communique-doc-meta,
+  .communique-doc-divider,
+  .communique-doc-type,
+  .communique-doc-meta-label {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
   }
