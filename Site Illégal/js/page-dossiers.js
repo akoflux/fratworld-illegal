@@ -212,7 +212,7 @@ function dossierCard(d, isArchive) {
         </div>`}
         ${voteButtonsHtml}
         ${adminHtml ? `<div class="vote-btns" style="margin-top:8px">${adminHtml}</div>` : ""}
-        ${admin ? manualControlHtml(d.id, statut) : ""}
+        ${!isSpectateur() ? manualControlHtml(d.id, statut) : ""}
       </div>`;
   } else {
     voteSection = `
