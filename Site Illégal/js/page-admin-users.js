@@ -23,6 +23,7 @@ requireAuth(async () => {
   }
 
   renderNavbar("admin");
+  injectAnnouncePanel();
   loadUsers();
   await initConfig();
   await initAnnouncement();
@@ -232,6 +233,80 @@ function clearForm() {
   document.getElementById("new-email").value       = "";
   document.getElementById("new-password").value    = "";
   document.getElementById("new-role").value        = "referent";
+}
+
+// ── Injection panel annonce (contourne le cache HTML Cloudflare) ──
+
+function injectAnnouncePanel() {
+  if (document.getElementById("announce-publish-btn")) return; // déjà dans le HTML
+  const main = document.querySelector("main.page-content");
+  if (!main) return;
+
+  const firstPanel = main.querySelector(".panel");
+  const html = `
+<div class="panel" id="announce-panel-injected" style="margin-bottom:24px">
+  <div class="panel-header">
+    <span class="panel-title">📢 Annonce</span>
+    <span id="announce-status-label" style="font-size:.75rem;color:var(--text-muted)">Chargement…</span>
+  </div>
+  <div class="panel-body" style="padding:20px 24px">
+    <div id="announce-current" style="display:none;margin-bottom:16px;padding:14px 16px;
+      border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg-main)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div id="announce-current-badge" style="font-size:.72rem;font-weight:700;margin-bottom:5px"></div>
+          <div id="announce-current-text" style="font-size:.88rem;color:var(--text-primary);white-space:pre-wrap;line-height:1.55"></div>
+          <div id="announce-current-meta" style="font-size:.73rem;color:var(--text-muted);margin-top:5px"></div>
+        </div>
+        <button id="announce-delete-btn" class="btn btn-secondary btn-sm" style="flex-shrink:0">✕ Supprimer</button>
+      </div>
+    </div>
+    <hr id="announce-sep" style="display:none;border:none;border-top:1px solid var(--border);margin:0 0 18px" />
+    <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px">Nouvelle annonce</div>
+    <div class="form-group">
+      <label>Message <span class="required">*</span></label>
+      <textarea id="announce-msg" class="form-control" style="min-height:88px" placeholder="Rédigez votre annonce…"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type</label>
+        <select id="announce-type" class="form-control">
+          <option value="info">ℹ️ Information</option>
+          <option value="warning">⚠️ Avertissement</option>
+          <option value="important">🔴 Important</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Expiration automatique</label>
+        <select id="announce-duration" class="form-control">
+          <option value="0">Manuelle uniquement</option>
+          <option value="3600">1 heure</option>
+          <option value="21600">6 heures</option>
+          <option value="43200">12 heures</option>
+          <option value="86400">24 heures</option>
+          <option value="259200">3 jours</option>
+          <option value="604800">7 jours</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Image (URL, optionnel)</label>
+      <input id="announce-image" type="url" class="form-control" placeholder="https://…" />
+      <span class="form-hint">Miniature affichée à gauche du message.</span>
+    </div>
+    <div class="form-actions" style="padding-top:0;border-top:none">
+      <button id="announce-publish-btn" class="btn btn-primary">📢 Publier l'annonce</button>
+    </div>
+  </div>
+</div>`;
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html.trim();
+  if (firstPanel) {
+    main.insertBefore(wrapper.firstElementChild, firstPanel);
+  } else {
+    main.appendChild(wrapper.firstElementChild);
+  }
 }
 
 // ── Annonces ──────────────────────────────────────────────────
