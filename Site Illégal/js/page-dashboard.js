@@ -3,12 +3,15 @@ import { subscribeEntries, markDeadlineReminderSent } from "./entries.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import { sendDiscordNotification } from "./discord.js";
 import { renderNavbar, formatDate, statusClass, statusBadge, setDeadlineBadge } from "./ui-shared.js";
+import { db } from "./firebase-init.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let unsubscribe  = null;
 let VOTES_NEEDED = 3;
 
 requireAuth(async () => {
   renderNavbar("dashboard");
+  loadAnnouncement();
   const settings = await loadSettings();
   VOTES_NEEDED   = getVotesNeeded(settings);
   unsubscribe    = subscribeEntries(entries => {
@@ -30,6 +33,73 @@ requireAuth(async () => {
 });
 
 window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); });
+
+// ── Annonce ───────────────────────────────────────────────────
+
+async function loadAnnouncement() {
+  try {
+    const snap = await getDoc(doc(db, "settings", "announcement"));
+    if (!snap.exists()) return;
+    const data = snap.data();
+
+    if (data.expiresAt) {
+      const exp = data.expiresAt.toDate?.() ?? new Date(data.expiresAt);
+      if (exp < new Date()) return;
+    }
+
+    const key = `fw-announce-${data.createdAt?.seconds ?? 0}`;
+    if (sessionStorage.getItem(key)) return;
+
+    renderAnnouncement(data, key);
+  } catch (_) {}
+}
+
+function renderAnnouncement(data, dismissKey) {
+  const banner = document.getElementById("announce-banner");
+  if (!banner) return;
+
+  const ICONS = { info: "ℹ️", warning: "⚠️", important: "🔴" };
+  const icon  = ICONS[data.type] || "📢";
+
+  const leftHtml = data.imageUrl
+    ? `<img src="${escAttr(data.imageUrl)}" class="announce-banner-img" alt=""
+         onerror="this.style.display='none'" />`
+    : `<span class="announce-banner-icon">${icon}</span>`;
+
+  const metaParts = [`Publié par ${esc(data.createdBy || "Admin")}`];
+  if (data.expiresAt) {
+    const exp    = data.expiresAt.toDate?.() ?? new Date(data.expiresAt);
+    const expStr = exp.toLocaleDateString("fr-FR", {
+      day: "2-digit", month: "long", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    }).replace(",", " à");
+    metaParts.push(`Expire le ${expStr}`);
+  }
+
+  banner.className    = `announce-banner ${data.type || "info"}`;
+  banner.style.display = "flex";
+  banner.innerHTML    = `
+    ${leftHtml}
+    <div class="announce-banner-body">
+      <div class="announce-banner-text">${icon} ${esc(data.message)}</div>
+      <div class="announce-banner-meta">${metaParts.join(" · ")}</div>
+    </div>
+    <button class="announce-banner-close" title="Masquer pour cette session"
+      onclick="dismissAnnouncement('${escAttr(dismissKey)}')">✕</button>`;
+}
+
+window.dismissAnnouncement = (key) => {
+  sessionStorage.setItem(key, "1");
+  const banner = document.getElementById("announce-banner");
+  if (!banner) return;
+  banner.style.transition = "opacity .2s ease, transform .2s ease";
+  banner.style.opacity    = "0";
+  banner.style.transform  = "translateY(-6px)";
+  setTimeout(() => { banner.style.display = "none"; }, 210);
+};
+
+function esc(s)     { return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escAttr(s) { return String(s || "").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 
 function renderStats(entries) {
   document.getElementById("stat-total").textContent   = entries.length;

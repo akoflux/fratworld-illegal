@@ -1,10 +1,10 @@
 import { db } from "./firebase-init.js";
 import { FIREBASE_CONFIG } from "../config.js";
-import { requireAuth, isAdmin, getCurrentUser } from "./auth.js";
+import { requireAuth, isAdmin, getCurrentUser, getCurrentUserData } from "./auth.js";
 import { loadSettings, saveSettings, getVotesNeeded, invalidateSettingsCache } from "./settings.js";
 import { renderNavbar, showToast, confirmModal } from "./ui-shared.js";
 import {
-  collection, getDocs, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy
+  collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -25,6 +25,7 @@ requireAuth(async () => {
   renderNavbar("admin");
   loadUsers();
   await initConfig();
+  await initAnnouncement();
 
   document.getElementById("create-user-btn").addEventListener("click", () => {
     document.getElementById("create-panel").style.display = "";
@@ -231,6 +232,104 @@ function clearForm() {
   document.getElementById("new-email").value       = "";
   document.getElementById("new-password").value    = "";
   document.getElementById("new-role").value        = "referent";
+}
+
+// ── Annonces ──────────────────────────────────────────────────
+
+const ANNOUNCE_REF = () => doc(db, "settings", "announcement");
+
+const TYPE_META = {
+  info:      { label: "ℹ️ Information",    color: "#3b82f6" },
+  warning:   { label: "⚠️ Avertissement",  color: "#f97316" },
+  important: { label: "🔴 Important",      color: "#ef4444" }
+};
+
+async function initAnnouncement() {
+  document.getElementById("announce-publish-btn").addEventListener("click", handlePublishAnnouncement);
+  document.getElementById("announce-delete-btn").addEventListener("click", handleDeleteAnnouncement);
+  try {
+    const snap = await getDoc(ANNOUNCE_REF());
+    snap.exists() ? showCurrentAnnouncement(snap.data()) : showNoAnnouncement();
+  } catch (_) { showNoAnnouncement(); }
+}
+
+function showCurrentAnnouncement(data) {
+  const tm = TYPE_META[data.type] || { label: "📢 Annonce", color: "var(--accent)" };
+  document.getElementById("announce-current").style.display   = "";
+  document.getElementById("announce-sep").style.display       = "";
+  document.getElementById("announce-current-badge").innerHTML =
+    `<span style="color:${tm.color};font-size:.72rem;font-weight:700">${tm.label}</span>`;
+  document.getElementById("announce-current-text").textContent = data.message;
+
+  const parts = [`Par ${data.createdBy || "Admin"}`];
+  if (data.imageUrl) parts.push("Image jointe");
+  if (data.expiresAt) {
+    const exp = data.expiresAt.toDate?.() ?? new Date(data.expiresAt);
+    parts.push(`Expire le ${exp.toLocaleDateString("fr-FR", {
+      day: "2-digit", month: "long", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    }).replace(",", " à")}`);
+  } else {
+    parts.push("Pas d'expiration automatique");
+  }
+  document.getElementById("announce-current-meta").textContent = parts.join(" · ");
+  document.getElementById("announce-status-label").textContent = "1 annonce active";
+  document.getElementById("announce-status-label").style.color = "var(--s-valid)";
+}
+
+function showNoAnnouncement() {
+  document.getElementById("announce-current").style.display = "none";
+  document.getElementById("announce-sep").style.display     = "none";
+  document.getElementById("announce-status-label").textContent = "Aucune annonce active";
+  document.getElementById("announce-status-label").style.color = "var(--text-muted)";
+}
+
+async function handlePublishAnnouncement() {
+  const message  = document.getElementById("announce-msg").value.trim();
+  const type     = document.getElementById("announce-type").value;
+  const secs     = parseInt(document.getElementById("announce-duration").value, 10);
+  const imageUrl = document.getElementById("announce-image").value.trim() || null;
+
+  if (!message) { showToast("Le message est requis.", "error"); return; }
+
+  const btn = document.getElementById("announce-publish-btn");
+  btn.disabled = true; btn.textContent = "Publication…";
+  try {
+    const userData  = getCurrentUserData();
+    const expiresAt = secs > 0 ? new Date(Date.now() + secs * 1000) : null;
+    await setDoc(ANNOUNCE_REF(), {
+      message, type, imageUrl, expiresAt,
+      createdAt: serverTimestamp(),
+      createdBy: userData?.displayName || "Admin"
+    });
+    document.getElementById("announce-msg").value            = "";
+    document.getElementById("announce-type").value           = "info";
+    document.getElementById("announce-duration").value       = "0";
+    document.getElementById("announce-image").value          = "";
+    const snap = await getDoc(ANNOUNCE_REF());
+    showCurrentAnnouncement(snap.data());
+    showToast("Annonce publiée.", "success");
+  } catch (err) {
+    showToast("Erreur lors de la publication.", "error"); console.error(err);
+  } finally {
+    btn.disabled = false; btn.textContent = "📢 Publier l'annonce";
+  }
+}
+
+async function handleDeleteAnnouncement() {
+  const ok = await confirmModal(
+    "Supprimer l'annonce",
+    "L'annonce disparaîtra immédiatement de la page d'accueil pour tous les utilisateurs.",
+    "Supprimer"
+  );
+  if (!ok) return;
+  try {
+    await deleteDoc(ANNOUNCE_REF());
+    showNoAnnouncement();
+    showToast("Annonce supprimée.", "success");
+  } catch (err) {
+    showToast("Erreur lors de la suppression.", "error"); console.error(err);
+  }
 }
 
 function esc(str) {
