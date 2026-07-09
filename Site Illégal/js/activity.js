@@ -35,5 +35,6 @@ export const ACTION_META = {
   poste_change:     { icon: "💼", text: d => `Poste → ${d.poste || "Aucun"}` },
   config_save:      { icon: "⚙️", text: d => `Config : ${d.referentCount} référents` },
   announce_publish: { icon: "📢", text: _ => `Annonce publiée` },
-  announce_delete:  { icon: "🗑️", text: _ => `Annonce supprimée` }
+  announce_delete:  { icon: "🗑️", text: _ => `Annonce supprimée` },
+  user_login:       { icon: "🔑", text: _ => `Connexion` }
 };
