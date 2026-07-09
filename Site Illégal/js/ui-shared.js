@@ -100,7 +100,7 @@ export function renderNavbar(activePage) {
       <div class="navbar-right">
         <button class="nav-search-btn" id="nav-search-btn" title="Rechercher">🔍</button>
         <button class="nav-deadline-btn" id="nav-deadline-btn" title="Deadlines de vote" style="display:none">⏰<span id="nav-deadline-badge" class="deadline-badge"></span></button>
-        <div class="user-info">
+        <div class="user-info" style="cursor:pointer" onclick="window.location.href='/profile.html'" title="Mon profil">
           <div class="user-avatar">${initials}</div>
           <span style="display:none" class="user-name-text">${name}</span>
           <span class="role-badge ${role}">${role}</span>

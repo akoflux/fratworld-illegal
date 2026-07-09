@@ -10,6 +10,7 @@ let allDossiers        = [];
 let showArchived       = false;
 let unsubscribe        = null;
 let VOTES_NEEDED_COUNT = 3;
+let _prevDossierIds    = null;
 
 requireAuth(async () => {
   renderNavbar("dossiers");
@@ -23,7 +24,21 @@ requireAuth(async () => {
   if (refCountEl) refCountEl.textContent = settings.referentCount;
 
   unsubscribe = subscribeDossiers(dossiers => {
+    if (_prevDossierIds === null) {
+      _prevDossierIds = new Set(dossiers.map(d => d.id));
+      allDossiers = dossiers;
+      populateDossierAuthorFilter(dossiers);
+      renderDossiers();
+      return;
+    }
+    dossiers.forEach(d => {
+      if (!_prevDossierIds.has(d.id)) {
+        showToast(`Nouveau dossier : "${d.nomGroupe}" par ${d.authorName}`, "info", 4000);
+      }
+    });
+    _prevDossierIds = new Set(dossiers.map(d => d.id));
     allDossiers = dossiers;
+    populateDossierAuthorFilter(dossiers);
     renderDossiers();
   });
 
@@ -36,6 +51,10 @@ requireAuth(async () => {
     showArchived = !showArchived;
     document.getElementById("toggle-archived").textContent = showArchived ? "Masquer l'historique" : "Voir l'historique";
     renderDossiers();
+  });
+
+  ["dos-search", "dos-filter-type", "dos-filter-author"].forEach(id => {
+    document.getElementById(id)?.addEventListener("input", renderDossiers);
   });
 
   // Installation modal form
@@ -66,16 +85,42 @@ const STATUS_PICK_OPTS = [
 
 // ── Render ────────────────────────────────────────────────────
 
+function populateDossierAuthorFilter(dossiers) {
+  const sel = document.getElementById("dos-filter-author");
+  if (!sel) return;
+  const current = sel.value;
+  const authors = [...new Set(dossiers.map(d => d.authorName).filter(Boolean))].sort();
+  sel.innerHTML = `<option value="">Tous auteurs</option>` +
+    authors.map(a => `<option value="${a}" ${a === current ? "selected" : ""}>${a}</option>`).join("");
+}
+
+function getFilteredDossiers(list) {
+  const search = (document.getElementById("dos-search")?.value || "").toLowerCase().trim();
+  const type   = document.getElementById("dos-filter-type")?.value || "";
+  const author = document.getElementById("dos-filter-author")?.value || "";
+  return list.filter(d => {
+    if (type   && d.typeGroupe  !== type)   return false;
+    if (author && d.authorName  !== author) return false;
+    if (search) {
+      const hay = `${d.nomGroupe} ${d.typeGroupe} ${d.authorName} ${d.description} ${d.contactName}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
 function renderDossiers() {
   const active   = allDossiers.filter(d => !d.archived);
   const archived = allDossiers.filter(d =>  d.archived);
+  const fActive  = getFilteredDossiers(active);
+  const fArchived = getFilteredDossiers(archived);
 
   document.getElementById("active-count").textContent   = active.length;
   document.getElementById("archived-count").textContent = archived.length;
 
-  renderList("dossiers-active",   active,   false);
+  renderList("dossiers-active",   fActive,   false);
   if (showArchived) {
-    renderList("dossiers-archived", archived, true);
+    renderList("dossiers-archived", fArchived, true);
     document.getElementById("archived-section").style.display = "block";
   } else {
     document.getElementById("archived-section").style.display = "none";

@@ -2,6 +2,7 @@ import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
 import { sendDossierNotification, sendDossierStatusChange } from "./discord.js";
+import { logActivity } from "./activity.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, query, orderBy, onSnapshot, serverTimestamp,
@@ -41,6 +42,7 @@ export async function createDossier(data) {
 
   const ref = await addDoc(collection(db, "dossiers"), payload);
   await sendDossierNotification("dossier_create", { id: ref.id, ...payload, authorName: name }, votesNeeded, data.mentionStaff !== false);
+  logActivity("dossier_create", { id: ref.id, nom: payload.nomGroupe });
   return ref;
 }
 
@@ -224,6 +226,7 @@ export async function changerStatutDossier(id, dossier, newStatut, extraData = {
     id, ...dossier,
     refusalReason: extraData.reason || dossier.refusalReason || ""
   });
+  logActivity("dossier_status", { id, nom: dossier.nomGroupe, newStatut });
 
   return factionId;
 }

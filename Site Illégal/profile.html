@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mon profil — FratWorld Staff</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="app-wrapper">
+  <div id="navbar"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Mon profil</h1>
+        <p class="page-subtitle">Vos contributions et statistiques personnelles</p>
+      </div>
+    </div>
+
+    <!-- En-tête profil -->
+    <div id="profile-header" class="profile-header-card">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
+    <div class="dashboard-grid">
+
+      <!-- Mes entrées -->
+      <div class="panel" style="grid-column: 1 / -1">
+        <div class="panel-header">
+          <span class="panel-title">✏️ Mes entrées</span>
+          <span id="my-entries-count" style="font-size:.8rem;color:var(--text-muted)">—</span>
+        </div>
+        <div class="panel-body" id="my-entries-list">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Mes votes -->
+      <div class="panel" style="grid-column: 1 / -1">
+        <div class="panel-header">
+          <span class="panel-title">🗳 Mes votes</span>
+          <span id="my-votes-count" style="font-size:.8rem;color:var(--text-muted)">—</span>
+        </div>
+        <div class="panel-body" id="my-votes-list">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Mes dossiers soumis -->
+      <div class="panel" style="grid-column: 1 / -1">
+        <div class="panel-header">
+          <span class="panel-title">📂 Dossiers soumis</span>
+          <span id="my-dossiers-count" style="font-size:.8rem;color:var(--text-muted)">—</span>
+        </div>
+        <div class="panel-body" id="my-dossiers-list">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script type="module" src="/js/page-profile.js"></script>
+</body>
+</html>

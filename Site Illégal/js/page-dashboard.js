@@ -20,6 +20,7 @@ requireAuth(async () => {
     renderPinned(entries);
     renderVotes(entries);
     renderActivity(entries);
+    renderWeeklyStats(entries);
     checkDeadlines(entries);
   });
   if (isSpectateur()) {
@@ -277,6 +278,69 @@ async function checkDeadlines(entries) {
       console.error("Deadline reminder error:", err);
     }
   }
+}
+
+// ── Stats hebdomadaires ───────────────────────────────────────
+
+function renderWeeklyStats(entries) {
+  const container = document.getElementById("stats-chart");
+  if (!container) return;
+
+  const WEEKS = 8;
+  const now   = new Date();
+
+  // Construire les 8 semaines (lundi → dimanche)
+  const weeks = [];
+  for (let i = WEEKS - 1; i >= 0; i--) {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay() - i * 7 + 1); // lundi
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    const label = start.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+    weeks.push({ start, end, label, count: 0 });
+  }
+
+  // Compter les entrées créées par semaine
+  entries.forEach(e => {
+    const d = e.createdAt?.toDate?.() ?? (e.createdAt ? new Date(e.createdAt) : null);
+    if (!d) return;
+    for (const w of weeks) {
+      if (d >= w.start && d <= w.end) { w.count++; break; }
+    }
+  });
+
+  const maxCount = Math.max(...weeks.map(w => w.count), 1);
+  const totalThisWeek = weeks[WEEKS - 1].count;
+  const totalLastWeek = weeks[WEEKS - 2].count;
+
+  const barsHtml = weeks.map(w => {
+    const pct = Math.round((w.count / maxCount) * 100);
+    return `
+      <div class="stats-chart-col">
+        <div class="stats-chart-count">${w.count || ""}</div>
+        <div class="stats-chart-bar ${w.count > 0 ? "filled" : ""}" style="height:${Math.max(pct, 2)}%"></div>
+        <div class="stats-chart-label">${w.label}</div>
+      </div>`;
+  }).join("");
+
+  const trend = totalThisWeek > totalLastWeek
+    ? `<span style="color:var(--s-valid)">▲ ${totalThisWeek - totalLastWeek} vs semaine préc.</span>`
+    : totalThisWeek < totalLastWeek
+    ? `<span style="color:var(--s-refused)">▼ ${totalLastWeek - totalThisWeek} vs semaine préc.</span>`
+    : `<span style="color:var(--text-muted)">= identique à la semaine préc.</span>`;
+
+  container.innerHTML = `
+    <div class="stats-chart-wrap">${barsHtml}</div>
+    <div class="stats-legend">
+      <div class="stats-legend-item">
+        <div class="stats-legend-dot" style="background:var(--accent)"></div>
+        Cette semaine : <strong>${totalThisWeek} entrée${totalThisWeek !== 1 ? "s" : ""}</strong>
+      </div>
+      <div class="stats-legend-item">${trend}</div>
+      <div class="stats-legend-item" style="color:var(--text-muted)">Total 8 sem. : ${entries.length > 0 ? weeks.reduce((s,w) => s+w.count,0) : 0}</div>
+    </div>`;
 }
 
 function renderActivity(entries) {

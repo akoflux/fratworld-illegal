@@ -2,7 +2,8 @@ import { db } from "./firebase-init.js";
 import { FIREBASE_CONFIG } from "../config.js";
 import { requireAuth, isAdmin, getCurrentUser, getCurrentUserData } from "./auth.js";
 import { loadSettings, saveSettings, getVotesNeeded, invalidateSettingsCache } from "./settings.js";
-import { renderNavbar, showToast, confirmModal } from "./ui-shared.js";
+import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.js";
+import { logActivity, getRecentActivity, ACTION_META } from "./activity.js";
 import {
   collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -25,6 +26,7 @@ requireAuth(async () => {
   renderNavbar("admin");
   injectAnnouncePanel();
   loadUsers();
+  loadActivityLog();
   await initConfig();
   await initAnnouncement();
 
@@ -70,12 +72,45 @@ async function handleSaveConfig() {
   try {
     invalidateSettingsCache();
     await saveSettings({ referentCount: n });
+    logActivity("config_save", { referentCount: n });
     showToast(`Configuration sauvegardée — seuil : ${Math.ceil(n/2)}/${n} votes.`, "success");
+    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(err);
   } finally {
     btn.disabled = false; btn.textContent = "Sauvegarder";
+  }
+}
+
+// ── Journal d'activité ────────────────────────────────────────
+
+async function loadActivityLog() {
+  const container = document.getElementById("activity-log-list");
+  const countEl   = document.getElementById("activity-log-count");
+  if (!container) return;
+  try {
+    const logs = await getRecentActivity(50);
+    if (countEl) countEl.textContent = `${logs.length} entrée${logs.length !== 1 ? "s" : ""}`;
+    if (!logs.length) {
+      container.innerHTML = `<div style="padding:14px 0;text-align:center;color:var(--text-muted);font-size:.82rem">Aucune activité enregistrée.</div>`;
+      return;
+    }
+    container.innerHTML = logs.map(log => {
+      const meta = ACTION_META[log.action] || { icon: "•", text: _ => log.action };
+      const txt  = meta.text(log.details || {});
+      return `
+        <div class="activity-log-item">
+          <span class="activity-log-icon">${meta.icon}</span>
+          <div class="activity-log-content">
+            <div class="activity-log-action">${esc(txt)}</div>
+            <div class="activity-log-by">${esc(log.by || "?")} · ${formatDate(log.at)}</div>
+          </div>
+        </div>`;
+    }).join("");
+  } catch (err) {
+    if (countEl) countEl.textContent = "Erreur";
+    console.error(err);
   }
 }
 
@@ -146,8 +181,10 @@ window.handleDeleteUser = async (uid, name) => {
   if (!ok) return;
   try {
     await deleteDoc(doc(db, "users", uid));
+    logActivity("user_delete", { name });
     showToast(`Compte de ${name} supprimé.`, "success");
     loadUsers();
+    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la suppression.", "error");
     console.error(err);
@@ -159,8 +196,10 @@ window.handlePosteChange = async (select) => {
   const poste = select.value;
   try {
     await updateDoc(doc(db, "users", uid), { poste: poste || null });
+    logActivity("poste_change", { uid, poste });
     showToast("Poste mis à jour.", "success");
     loadUsers();
+    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors du changement de poste.", "error");
     console.error(err);
@@ -172,9 +211,10 @@ window.handleRoleChange = async (select) => {
   const role = select.value;
   try {
     await updateDoc(doc(db, "users", uid), { role });
+    logActivity("role_change", { uid, role });
     showToast("Rôle mis à jour.", "success");
-    // Recharger pour mettre à jour les badges
     loadUsers();
+    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors du changement de rôle.", "error");
     console.error(err);
@@ -210,11 +250,13 @@ async function handleCreateUser() {
       createdAt: serverTimestamp()
     });
 
+    logActivity("user_create", { displayName, email, role });
     showToast(`Compte créé pour ${displayName}.`, "success");
     clearForm();
     document.getElementById("create-panel").style.display = "none";
     document.getElementById("create-user-btn").style.display = "";
     loadUsers();
+    loadActivityLog();
   } catch (err) {
     const msg = err.code === "auth/email-already-in-use"
       ? "Cet email est déjà utilisé."
@@ -383,7 +425,9 @@ async function handlePublishAnnouncement() {
     document.getElementById("announce-image").value          = "";
     const snap = await getDoc(ANNOUNCE_REF());
     showCurrentAnnouncement(snap.data());
+    logActivity("announce_publish", { type, message: message.slice(0, 80) });
     showToast("Annonce publiée.", "success");
+    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la publication.", "error"); console.error(err);
   } finally {
@@ -401,7 +445,9 @@ async function handleDeleteAnnouncement() {
   try {
     await deleteDoc(ANNOUNCE_REF());
     showNoAnnouncement();
+    logActivity("announce_delete", {});
     showToast("Annonce supprimée.", "success");
+    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la suppression.", "error"); console.error(err);
   }

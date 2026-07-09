@@ -9,11 +9,12 @@ import {
 const SECTION_KEY  = new URLSearchParams(window.location.search).get("section") || "decisions";
 const SECTION_MAP  = { decisions: "Décisions", factions: "Factions", propositions: "Propositions & Dossiers" };
 
-let allEntries   = [];
-let viewMode     = localStorage.getItem("fw-view") || "cards";
-let showArchived = false;
-let unsubscribe  = null;
-let VOTES_NEEDED = 3;
+let allEntries    = [];
+let viewMode      = localStorage.getItem("fw-view") || "cards";
+let showArchived  = false;
+let unsubscribe   = null;
+let VOTES_NEEDED  = 3;
+let _prevEntryIds = null;
 
 requireAuth(async () => {
   renderNavbar(SECTION_KEY);
@@ -26,7 +27,21 @@ requireAuth(async () => {
   VOTES_NEEDED   = getVotesNeeded(settings);
 
   unsubscribe = subscribeEntries(entries => {
+    if (_prevEntryIds === null) {
+      _prevEntryIds = new Set(entries.map(e => e.id));
+      allEntries = entries;
+      populateAuthorFilter(entries);
+      renderEntries();
+      return;
+    }
+    entries.forEach(e => {
+      if (!_prevEntryIds.has(e.id)) {
+        showToast(`Nouvelle entrée : "${e.title}" par ${e.authorName}`, "info", 4000);
+      }
+    });
+    _prevEntryIds = new Set(entries.map(e => e.id));
     allEntries = entries;
+    populateAuthorFilter(entries);
     renderEntries();
   });
 
@@ -55,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  ["filter-cat", "filter-status", "filter-factions", "search-input"].forEach(id => {
+  ["filter-cat", "filter-status", "filter-factions", "filter-author", "filter-date", "search-input"].forEach(id => {
     document.getElementById(id)?.addEventListener("input", renderEntries);
   });
 
@@ -122,19 +137,43 @@ function getSectionForEntry(e) {
   return catMap[e.category] || "decisions";
 }
 
+function populateAuthorFilter(entries) {
+  const sel = document.getElementById("filter-author");
+  if (!sel) return;
+  const current = sel.value;
+  const authors = [...new Set(entries.map(e => e.authorName).filter(Boolean))].sort();
+  sel.innerHTML = `<option value="">Tous auteurs</option>` +
+    authors.map(a => `<option value="${a}" ${a === current ? "selected" : ""}>${a}</option>`).join("");
+}
+
+function dateRangeFilter(e, range) {
+  if (!range) return true;
+  const ts = e.createdAt?.toDate?.() ?? (e.createdAt ? new Date(e.createdAt) : null);
+  if (!ts) return false;
+  const now   = new Date();
+  const start = new Date();
+  if (range === "today") { start.setHours(0, 0, 0, 0); }
+  else if (range === "week") { start.setDate(now.getDate() - now.getDay()); start.setHours(0, 0, 0, 0); }
+  else if (range === "month") { start.setDate(1); start.setHours(0, 0, 0, 0); }
+  return ts >= start;
+}
+
 function filteredEntries() {
   const cat     = document.getElementById("filter-cat")?.value     || "";
   const status  = document.getElementById("filter-status")?.value  || "";
   const faction = document.getElementById("filter-factions")?.value || "";
+  const author  = document.getElementById("filter-author")?.value  || "";
+  const date    = document.getElementById("filter-date")?.value    || "";
   const search  = (document.getElementById("search-input")?.value  || "").toLowerCase().trim();
 
   return allEntries
     .filter(e => {
       if (getSectionForEntry(e) !== SECTION_KEY) return false;
-      // Archivées masquées par défaut sauf si toggle actif ou filtre statut explicite
       if (!showArchived && e.status === "Archivée" && !status) return false;
-      if (cat    && e.category !== cat)   return false;
+      if (cat    && e.category !== cat)    return false;
       if (status && e.status   !== status) return false;
+      if (author && e.authorName !== author) return false;
+      if (!dateRangeFilter(e, date)) return false;
       if (faction) {
         const facs = normalizeFactions(e.factions || e.faction);
         if (!facs.includes(faction) && !facs.includes("Toutes")) return false;

@@ -30,6 +30,24 @@
       </div>
     </div>
 
+    <!-- Toolbar filtres -->
+    <div class="dossier-toolbar">
+      <div class="search-wrap" style="flex:1;min-width:160px">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="dos-search" class="search-input" placeholder="Rechercher…" autocomplete="off" />
+      </div>
+      <select id="dos-filter-type" class="filter-select-sm">
+        <option value="">Tous types</option>
+        <option value="Gang">Gang</option>
+        <option value="MC / Groupe atypique">MC / Groupe atypique</option>
+        <option value="Mafia">Mafia</option>
+        <option value="Cartel">Cartel</option>
+      </select>
+      <select id="dos-filter-author" class="filter-select-sm">
+        <option value="">Tous auteurs</option>
+      </select>
+    </div>
+
     <!-- Dossiers actifs -->
     <div id="dossiers-active" class="dossiers-grid" style="margin-bottom:24px">
       <div class="spinner-wrap"><div class="spinner"></div></div>

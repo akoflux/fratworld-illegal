@@ -2,6 +2,7 @@ import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import { sendDiscordNotification } from "./discord.js";
 import { loadSettings, getVotesNeeded } from "./settings.js";
+import { logActivity } from "./activity.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion, arrayRemove, deleteField
@@ -45,6 +46,7 @@ export async function createEntry(data) {
 
   const ref = await addDoc(collection(db, "entries"), payload);
   await addHistory(ref.id, "create", [{ field: "all", oldValue: null, newValue: "Entrée créée" }]);
+  logActivity("entry_create", { entryId: ref.id, title: payload.title });
 
   if (data.replaces) {
     await updateDoc(doc(db, "entries", data.replaces), {
@@ -100,6 +102,7 @@ export async function updateEntry(id, data, original) {
   const statusChanged = changes.find(c => c.field === "status");
   if (statusChanged) {
     await sendDiscordNotification("status_change", { ...payload, id, authorName: name });
+    logActivity("entry_status", { entryId: id, title: payload.title, oldStatus: statusChanged.oldValue, newStatus: payload.status });
   }
 }
 
@@ -217,6 +220,7 @@ export async function voteEntry(id, direction, currentFor, currentAgainst, curre
     oldValue: null,
     newValue: `${name} a voté ${direction === "for" ? "Pour" : direction === "against" ? "Contre" : "Abstention"}`
   }]);
+  logActivity("entry_vote", { entryId: id, title: entryData.title || "", direction });
 
   if (finalStatus) {
     const snap = await getDoc(doc(db, "entries", id));
