@@ -115,6 +115,13 @@ function renderEntry(e) {
             <div class="info-label">Catégorie</div>
             <div class="info-value">${escapeHtml(e.category)}</div>
           </div>
+          ${Array.isArray(e.tags) && e.tags.length ? `
+          <div class="info-item" style="grid-column:1/-1">
+            <div class="info-label">Tags</div>
+            <div class="info-value" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px">
+              ${e.tags.map(t => `<span class="tag-chip" style="cursor:default">${escapeHtml(t)}</span>`).join("")}
+            </div>
+          </div>` : ""}
         </div>
       </div>
     </div>

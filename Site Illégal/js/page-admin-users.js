@@ -146,6 +146,7 @@ async function loadActivityLog() {
     }).join("");
   } catch (err) {
     if (countEl) countEl.textContent = "Erreur";
+    container.innerHTML = `<div style="padding:14px 0;text-align:center;color:var(--s-refused);font-size:.82rem">Impossible de charger le journal.</div>`;
     console.error(err);
   }
 }

@@ -1,18 +1,188 @@
-rules_version='2'
-
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 7, 24);
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isAdmin() {
+      return isAuthenticated() && getUserDoc().role == 'admin';
+    }
+    function isReferentOrAdmin() {
+      return isAuthenticated() &&
+             (getUserDoc().role == 'referent' || getUserDoc().role == 'admin');
+    }
+
+    // ── users ──────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read:   if isAuthenticated();
+      allow create: if isAdmin();
+      // Admin : tout. Utilisateur : peut mettre à jour uniquement lastSeen sur son propre doc.
+      allow update: if isAdmin() ||
+                       (isAuthenticated() && userId == request.auth.uid &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']));
+      allow delete: if isAdmin();
+    }
+
+    // ── entries ────────────────────────────────────────────────
+    function isVoteUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['votesFor', 'votesAgainst', 'votesAbstain',
+                       'votesAgainstReasons', 'updatedAt', 'status', 'deadlineReminderSent']);
+    }
+
+    match /entries/{entryId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() && resource.data.authorUid == request.auth.uid) ||
+                       (isReferentOrAdmin() && isVoteUpdate());
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+
+      match /history/{historyId} {
+        allow read:           if isAuthenticated();
+        allow create:         if isReferentOrAdmin();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── dossiers ───────────────────────────────────────────────
+    match /dossiers/{dossierId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isReferentOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── documents illégaux ─────────────────────────────────────
+    match /documents/{docId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
+
+    // ── factions ───────────────────────────────────────────────
+    match /factions/{factionId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isReferentOrAdmin();
+      allow delete: if isAdmin();
+
+      match /membres/{membreId} {
+        allow read:   if isAuthenticated();
+        allow create: if isReferentOrAdmin();
+        allow update: if isReferentOrAdmin();
+        allow delete: if isReferentOrAdmin();
+      }
+
+      // Timeline d'événements (Point 13)
+      match /events/{eventId} {
+        allow read:   if isAuthenticated();
+        allow create: if isReferentOrAdmin();
+        allow update: if isReferentOrAdmin();
+        allow delete: if isReferentOrAdmin();
+      }
+    }
+
+    // ── communiqués ────────────────────────────────────────────
+    match /communiques/{commId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // ── settings ───────────────────────────────────────────────
+    match /settings/{settingId} {
+      allow read:  if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Journal d'activité (Point 20 / activity.js) ────────────
+    match /activityLog/{logId} {
+      allow read:           if isAdmin();
+      allow create:         if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // ── Délégation de vote (Point 12) ─────────────────────────
+    match /delegations/{delegatorUid} {
+      allow read:   if isReferentOrAdmin();
+      allow create: if isReferentOrAdmin() && delegatorUid == request.auth.uid;
+      allow update: if isReferentOrAdmin() && delegatorUid == request.auth.uid;
+      allow delete: if isReferentOrAdmin() && delegatorUid == request.auth.uid;
+    }
+
+    // ── Règlement versionné (Point 6) ─────────────────────────
+    match /reglement/{sectionId} {
+      allow read:  if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /reglement_history/{histId} {
+      allow read:           if isAdmin();
+      allow create:         if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ── tasks ──────────────────────────────────────────────────
+    match /tasks/{taskId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
+
+    // ── agenda ─────────────────────────────────────────────────
+    match /agenda/{eventId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
+
+    // ── relations ──────────────────────────────────────────────
+    match /relations/{relationId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+    }
+
+    // ── markers (carte interactive) ────────────────────────────
+    match /markers/{markerId} {
+      allow read:   if isAuthenticated();
+      allow create: if isReferentOrAdmin();
+      allow update: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin() ||
+                       (isReferentOrAdmin() &&
+                        resource.data.authorUid == request.auth.uid);
     }
   }
 }

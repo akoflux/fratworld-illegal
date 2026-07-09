@@ -31,6 +31,7 @@ requireAuth(async () => {
       _prevEntryIds = new Set(entries.map(e => e.id));
       allEntries = entries;
       populateAuthorFilter(entries);
+      populateTagFilter(entries);
       renderEntries();
       return;
     }
@@ -42,6 +43,7 @@ requireAuth(async () => {
     _prevEntryIds = new Set(entries.map(e => e.id));
     allEntries = entries;
     populateAuthorFilter(entries);
+    populateTagFilter(entries);
     renderEntries();
   });
 
@@ -70,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  ["filter-cat", "filter-status", "filter-factions", "filter-author", "filter-date", "search-input"].forEach(id => {
+  ["filter-cat", "filter-status", "filter-factions", "filter-author", "filter-tag", "filter-date", "search-input"].forEach(id => {
     document.getElementById(id)?.addEventListener("input", renderEntries);
   });
 
@@ -146,6 +148,15 @@ function populateAuthorFilter(entries) {
     authors.map(a => `<option value="${a}" ${a === current ? "selected" : ""}>${a}</option>`).join("");
 }
 
+function populateTagFilter(entries) {
+  const sel = document.getElementById("filter-tag");
+  if (!sel) return;
+  const current = sel.value;
+  const tags = [...new Set(entries.flatMap(e => e.tags || []))].sort();
+  sel.innerHTML = `<option value="">Tous tags</option>` +
+    tags.map(t => `<option value="${t}" ${t === current ? "selected" : ""}>${t}</option>`).join("");
+}
+
 function dateRangeFilter(e, range) {
   if (!range) return true;
   const ts = e.createdAt?.toDate?.() ?? (e.createdAt ? new Date(e.createdAt) : null);
@@ -163,6 +174,7 @@ function filteredEntries() {
   const status  = document.getElementById("filter-status")?.value  || "";
   const faction = document.getElementById("filter-factions")?.value || "";
   const author  = document.getElementById("filter-author")?.value  || "";
+  const tag     = document.getElementById("filter-tag")?.value     || "";
   const date    = document.getElementById("filter-date")?.value    || "";
   const search  = (document.getElementById("search-input")?.value  || "").toLowerCase().trim();
 
@@ -173,13 +185,14 @@ function filteredEntries() {
       if (cat    && e.category !== cat)    return false;
       if (status && e.status   !== status) return false;
       if (author && e.authorName !== author) return false;
+      if (tag    && !(e.tags || []).includes(tag)) return false;
       if (!dateRangeFilter(e, date)) return false;
       if (faction) {
         const facs = normalizeFactions(e.factions || e.faction);
         if (!facs.includes(faction) && !facs.includes("Toutes")) return false;
       }
       if (search) {
-        const hay = `${e.title} ${e.description} ${e.authorName} ${e.category}`.toLowerCase();
+        const hay = `${e.title} ${e.description} ${e.authorName} ${e.category} ${(e.tags || []).join(" ")}`.toLowerCase();
         if (!hay.includes(search)) return false;
       }
       return true;
