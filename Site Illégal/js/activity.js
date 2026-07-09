@@ -33,10 +33,13 @@ export function subscribeActivity(n = 100, callback) {
 }
 
 // Activité d'un utilisateur spécifique (pour l'admin + profil)
+// Pas d'orderBy pour éviter l'index composite — tri côté client
 export async function getUserActivity(uid, n = 30) {
-  const q    = query(collection(db, "activityLog"), where("uid", "==", uid), orderBy("at", "desc"), limit(n));
+  const q    = query(collection(db, "activityLog"), where("uid", "==", uid), limit(n));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.at?.seconds ?? 0) - (a.at?.seconds ?? 0));
 }
 
 export const ACTION_META = {
