@@ -112,7 +112,8 @@ service cloud.firestore {
 
     // ── Journal d'activité (Point 20 / activity.js) ────────────
     match /activityLog/{logId} {
-      allow read:           if isAdmin();
+      // Admin : tout lire. Utilisateur authentifié : uniquement ses propres entrées.
+      allow read:           if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
       allow create:         if isAuthenticated();
       allow update, delete: if false;
     }

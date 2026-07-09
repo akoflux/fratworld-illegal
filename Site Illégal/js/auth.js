@@ -10,7 +10,15 @@ let _currentUser     = null;
 let _currentUserData = null;
 
 export async function login(email, password) {
-  const cred = await signInWithEmailAndPassword(auth, email, password);
+  const cred     = await signInWithEmailAndPassword(auth, email, password);
+  const userData = await fetchUserData(cred.user.uid).catch(() => null);
+  addDoc(collection(db, "activityLog"), {
+    action: "user_login",
+    details: {},
+    uid: cred.user.uid,
+    by: userData?.displayName || cred.user.email || "?",
+    at: serverTimestamp()
+  }).catch(() => {});
   return cred.user;
 }
 
@@ -45,13 +53,6 @@ export function requireAuth(callback) {
     _currentUser     = user;
     _currentUserData = userData;
     setDoc(doc(db, "users", user.uid), { lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
-    addDoc(collection(db, "activityLog"), {
-      action: "user_login",
-      details: {},
-      uid: user.uid,
-      by: userData.displayName || user.email || "?",
-      at: serverTimestamp()
-    }).catch(() => {});
     callback(user, userData);
   });
 }

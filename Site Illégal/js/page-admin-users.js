@@ -3,10 +3,10 @@ import { FIREBASE_CONFIG } from "../config.js";
 import { requireAuth, isAdmin, getCurrentUser, getCurrentUserData } from "./auth.js";
 import { loadSettings, saveSettings, getVotesNeeded, invalidateSettingsCache } from "./settings.js";
 import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.js";
-import { logActivity, getRecentActivity, ACTION_META } from "./activity.js";
+import { logActivity, subscribeActivity, getUserActivity, ACTION_META } from "./activity.js";
 import { sendWeeklyRecap } from "./discord.js";
 import {
-  collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy
+  collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -28,9 +28,18 @@ requireAuth(async () => {
   injectAnnouncePanel();
   injectDiscordRecapBtn();
   loadUsers();
-  loadActivityLog();
+  startActivitySubscription();
   await initConfig();
   await initAnnouncement();
+
+  document.querySelectorAll(".activity-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".activity-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _activeTab = btn.dataset.tab;
+      renderActivityLogs();
+    });
+  });
 
   document.getElementById("create-user-btn").addEventListener("click", () => {
     document.getElementById("create-panel").style.display = "";
@@ -76,7 +85,6 @@ async function handleSaveConfig() {
     await saveSettings({ referentCount: n });
     logActivity("config_save", { referentCount: n });
     showToast(`Configuration sauvegardée — seuil : ${Math.ceil(n/2)}/${n} votes.`, "success");
-    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(err);
@@ -88,15 +96,15 @@ async function handleSaveConfig() {
 // ── Discord résumé hebdomadaire ───────────────────────────────
 
 function injectDiscordRecapBtn() {
-  const activityHeader = document.querySelector("#activity-log-count")?.closest(".panel-header");
-  if (!activityHeader || document.getElementById("discord-recap-btn")) return;
+  const container = document.getElementById("activity-header-right");
+  if (!container || document.getElementById("discord-recap-btn")) return;
   const btn = document.createElement("button");
   btn.id = "discord-recap-btn";
   btn.className = "btn btn-secondary btn-sm";
   btn.textContent = "📤 Résumé Discord";
   btn.style.cssText = "font-size:.75rem;padding:4px 10px";
   btn.addEventListener("click", handleDiscordRecap);
-  activityHeader.appendChild(btn);
+  container.appendChild(btn);
 }
 
 async function handleDiscordRecap() {
@@ -121,35 +129,87 @@ async function handleDiscordRecap() {
 
 // ── Journal d'activité ────────────────────────────────────────
 
-async function loadActivityLog() {
+let _actUnsub  = null;
+let _allLogs   = [];
+let _activeTab = "journal";
+
+function startActivitySubscription() {
+  if (_actUnsub) { _actUnsub(); _actUnsub = null; }
+  _actUnsub = subscribeActivity(100, (logs, err) => {
+    const container = document.getElementById("activity-log-list");
+    const countEl   = document.getElementById("activity-log-count");
+    if (err) {
+      if (countEl) countEl.textContent = "Erreur";
+      if (container) container.innerHTML = `<div style="padding:14px 0;text-align:center;color:var(--s-refused);font-size:.82rem">Impossible de charger le journal.</div>`;
+      return;
+    }
+    _allLogs = logs || [];
+    renderActivityLogs();
+  });
+}
+
+function renderActivityLogs() {
   const container = document.getElementById("activity-log-list");
   const countEl   = document.getElementById("activity-log-count");
   if (!container) return;
+
+  const isConn = _activeTab === "connexions";
+  const logs   = _allLogs.filter(l => isConn ? l.action === "user_login" : l.action !== "user_login");
+
+  if (countEl) countEl.textContent = `${logs.length} entrée${logs.length !== 1 ? "s" : ""}`;
+
+  if (!logs.length) {
+    container.innerHTML = `<div style="padding:14px 0;text-align:center;color:var(--text-muted);font-size:.82rem">Aucune entrée.</div>`;
+    return;
+  }
+  container.innerHTML = logs.map(log => {
+    const meta = ACTION_META[log.action] || { icon: "•", text: _ => log.action };
+    return `
+      <div class="activity-log-item">
+        <span class="activity-log-icon">${meta.icon}</span>
+        <div class="activity-log-content">
+          <div class="activity-log-action">${esc(meta.text(log.details || {}))}</div>
+          <div class="activity-log-by">${esc(log.by || "?")} · ${formatDate(log.at)}</div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+window.showUserActivity = async (uid, name) => {
+  const modal   = document.getElementById("user-activity-modal");
+  const title   = document.getElementById("user-activity-modal-title");
+  const content = document.getElementById("user-activity-modal-content");
+  if (!modal) return;
+  title.textContent = `Activité de ${name}`;
+  content.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  modal.style.display = "";
   try {
-    const logs = await getRecentActivity(50);
-    if (countEl) countEl.textContent = `${logs.length} entrée${logs.length !== 1 ? "s" : ""}`;
+    const logs = await getUserActivity(uid, 50);
     if (!logs.length) {
-      container.innerHTML = `<div style="padding:14px 0;text-align:center;color:var(--text-muted);font-size:.82rem">Aucune activité enregistrée.</div>`;
+      content.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:.82rem">Aucune activité enregistrée.</div>`;
       return;
     }
-    container.innerHTML = logs.map(log => {
+    content.innerHTML = `<div class="activity-log-list">${logs.map(log => {
       const meta = ACTION_META[log.action] || { icon: "•", text: _ => log.action };
-      const txt  = meta.text(log.details || {});
       return `
         <div class="activity-log-item">
           <span class="activity-log-icon">${meta.icon}</span>
           <div class="activity-log-content">
-            <div class="activity-log-action">${esc(txt)}</div>
-            <div class="activity-log-by">${esc(log.by || "?")} · ${formatDate(log.at)}</div>
+            <div class="activity-log-action">${esc(meta.text(log.details || {}))}</div>
+            <div class="activity-log-by">${formatDate(log.at)}</div>
           </div>
         </div>`;
-    }).join("");
+    }).join("")}</div>`;
   } catch (err) {
-    if (countEl) countEl.textContent = "Erreur";
-    container.innerHTML = `<div style="padding:14px 0;text-align:center;color:var(--s-refused);font-size:.82rem">Impossible de charger le journal.</div>`;
+    content.innerHTML = `<div style="padding:20px;text-align:center;color:var(--s-refused);font-size:.82rem">Erreur de chargement.</div>`;
     console.error(err);
   }
-}
+};
+
+window.closeUserActivityModal = () => {
+  const modal = document.getElementById("user-activity-modal");
+  if (modal) modal.style.display = "none";
+};
 
 // ── Utilisateurs ──────────────────────────────────────────────
 
@@ -202,9 +262,14 @@ function renderUserList(users) {
             <option value="Gestionnaire Groupe Atypique" ${u.poste === "Gestionnaire Groupe Atypique" ? "selected" : ""}>Gest. Atypique</option>
             <option value="Gestionnaire Gang"         ${u.poste === "Gestionnaire Gang"         ? "selected" : ""}>Gest. Gang</option>
           </select>
+          <button class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:.78rem"
+            onclick="showUserActivity('${u.id}','${esc(u.displayName || u.email)}')">👁 Activité</button>
           <button class="btn btn-danger btn-sm" style="padding:4px 10px;font-size:.78rem"
             onclick="handleDeleteUser('${u.id}','${esc(u.displayName || u.email)}')">✕ Supprimer</button>
-        ` : `<div style="width:90px"></div>`}
+        ` : `
+          <button class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:.78rem"
+            onclick="showUserActivity('${u.id}','${esc(u.displayName || u.email)}')">👁 Activité</button>
+          <div style="width:90px"></div>`}
       </div>`;
   }).join("");
 }
@@ -221,7 +286,6 @@ window.handleDeleteUser = async (uid, name) => {
     logActivity("user_delete", { name });
     showToast(`Compte de ${name} supprimé.`, "success");
     loadUsers();
-    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la suppression.", "error");
     console.error(err);
@@ -236,7 +300,6 @@ window.handlePosteChange = async (select) => {
     logActivity("poste_change", { uid, poste });
     showToast("Poste mis à jour.", "success");
     loadUsers();
-    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors du changement de poste.", "error");
     console.error(err);
@@ -251,7 +314,6 @@ window.handleRoleChange = async (select) => {
     logActivity("role_change", { uid, role });
     showToast("Rôle mis à jour.", "success");
     loadUsers();
-    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors du changement de rôle.", "error");
     console.error(err);
@@ -293,7 +355,6 @@ async function handleCreateUser() {
     document.getElementById("create-panel").style.display = "none";
     document.getElementById("create-user-btn").style.display = "";
     loadUsers();
-    loadActivityLog();
   } catch (err) {
     const msg = err.code === "auth/email-already-in-use"
       ? "Cet email est déjà utilisé."
@@ -464,7 +525,6 @@ async function handlePublishAnnouncement() {
     showCurrentAnnouncement(snap.data());
     logActivity("announce_publish", { type, message: message.slice(0, 80) });
     showToast("Annonce publiée.", "success");
-    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la publication.", "error"); console.error(err);
   } finally {
@@ -484,7 +544,6 @@ async function handleDeleteAnnouncement() {
     showNoAnnouncement();
     logActivity("announce_delete", {});
     showToast("Annonce supprimée.", "success");
-    loadActivityLog();
   } catch (err) {
     showToast("Erreur lors de la suppression.", "error"); console.error(err);
   }

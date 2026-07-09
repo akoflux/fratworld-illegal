@@ -1,7 +1,7 @@
 import { db } from "./firebase-init.js";
 import { getCurrentUser, getCurrentUserData } from "./auth.js";
 import {
-  collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp
+  collection, addDoc, getDocs, onSnapshot, query, orderBy, where, limit, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export async function logActivity(action, details = {}) {
@@ -19,6 +19,22 @@ export async function logActivity(action, details = {}) {
 
 export async function getRecentActivity(n = 50) {
   const q    = query(collection(db, "activityLog"), orderBy("at", "desc"), limit(n));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Abonnement temps réel — retourne la fonction de désabonnement
+export function subscribeActivity(n = 100, callback) {
+  const q = query(collection(db, "activityLog"), orderBy("at", "desc"), limit(n));
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })), null),
+    err  => callback(null, err)
+  );
+}
+
+// Activité d'un utilisateur spécifique (pour l'admin + profil)
+export async function getUserActivity(uid, n = 30) {
+  const q    = query(collection(db, "activityLog"), where("uid", "==", uid), orderBy("at", "desc"), limit(n));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }

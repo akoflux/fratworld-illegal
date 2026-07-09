@@ -122,8 +122,16 @@
     <!-- Journal d'activité -->
     <div class="panel" style="margin-bottom:24px">
       <div class="panel-header">
-        <span class="panel-title">📋 Journal d'activité</span>
-        <span id="activity-log-count" style="font-size:.75rem;color:var(--text-muted)">Chargement…</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="panel-title">📋 Journal</span>
+          <div class="activity-tabs">
+            <button class="activity-tab active" data-tab="journal">Activité</button>
+            <button class="activity-tab" data-tab="connexions">Connexions</button>
+          </div>
+        </div>
+        <div id="activity-header-right" style="display:flex;gap:8px;align-items:center">
+          <span id="activity-log-count" style="font-size:.75rem;color:var(--text-muted)">Chargement…</span>
+        </div>
       </div>
       <div class="panel-body" style="padding:14px 20px;max-height:340px;overflow-y:auto">
         <div id="activity-log-list" class="activity-log-list">
@@ -177,6 +185,19 @@
 
   </main>
 </div>
+<!-- Modal activité utilisateur -->
+<div id="user-activity-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.55);overflow-y:auto;padding:40px 16px">
+  <div style="max-width:560px;margin:0 auto;background:var(--bg-card);border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden">
+    <div class="panel-header">
+      <span class="panel-title" id="user-activity-modal-title">Activité</span>
+      <button class="btn-icon" onclick="closeUserActivityModal()">✕</button>
+    </div>
+    <div id="user-activity-modal-content" style="max-height:480px;overflow-y:auto;padding:14px 20px">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="/js/page-admin-users.js"></script>
 </body>
 </html>

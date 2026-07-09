@@ -1,5 +1,6 @@
 import { requireAuth, getCurrentUser, getCurrentUserData } from "./auth.js";
 import { getEntries } from "./entries.js";
+import { getUserActivity, ACTION_META } from "./activity.js";
 import { db } from "./firebase-init.js";
 import {
   renderNavbar, showToast, formatDate, statusBadge, catBadge
@@ -31,6 +32,8 @@ requireAuth(async (user, userData) => {
   renderMyEntries(myEntries);
   renderMyVotes(myVotedFor, uid);
   renderMyDossiers(myDossiers);
+
+  loadMyActivity(uid);
 
   if (role !== "spectateur") {
     loadDelegation(uid, name);
@@ -144,6 +147,35 @@ function renderMyDossiers(dossiers) {
         <td style="color:var(--text-muted);font-size:.78rem;white-space:nowrap">${formatDate(d.createdAt)}</td>
       </tr>`).join("")}
     </tbody></table></div>`;
+}
+
+// ── Mon activité récente ──────────────────────────────────────
+
+async function loadMyActivity(uid) {
+  const container = document.getElementById("my-activity-list");
+  const countEl   = document.getElementById("my-activity-count");
+  if (!container) return;
+  try {
+    const logs = await getUserActivity(uid, 20);
+    if (countEl) countEl.textContent = `${logs.length} action${logs.length !== 1 ? "s" : ""}`;
+    if (!logs.length) {
+      container.innerHTML = `<div style="padding:18px;text-align:center;color:var(--text-muted);font-size:.82rem">Aucune activité enregistrée.</div>`;
+      return;
+    }
+    container.innerHTML = `<div class="activity-log-list">${logs.map(log => {
+      const meta = ACTION_META[log.action] || { icon: "•", text: _ => log.action };
+      return `
+        <div class="activity-log-item">
+          <span class="activity-log-icon">${meta.icon}</span>
+          <div class="activity-log-content">
+            <div class="activity-log-action">${esc(meta.text(log.details || {}))}</div>
+            <div class="activity-log-by">${formatDate(log.at)}</div>
+          </div>
+        </div>`;
+    }).join("")}</div>`;
+  } catch {
+    if (container) container.innerHTML = `<div style="padding:18px;text-align:center;color:var(--text-muted);font-size:.82rem">Impossible de charger l'activité.</div>`;
+  }
 }
 
 // ── Délégation de vote ────────────────────────────────────────
