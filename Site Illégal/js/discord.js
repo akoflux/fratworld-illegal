@@ -214,6 +214,63 @@ export async function sendDossierStatusChange(newStatut, dossier) {
   }
 }
 
+// ── Résumé hebdomadaire ───────────────────────────────────────
+
+export async function sendWeeklyRecap(entries, dossiers) {
+  if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("VOTRE_WEBHOOK_ICI")) return;
+
+  const now      = Date.now();
+  const weekMs   = 7 * 24 * 3600 * 1000;
+  const cutoff   = now - weekMs;
+
+  const toTs = v => {
+    if (!v) return 0;
+    if (v.toMillis) return v.toMillis();
+    if (v.seconds)  return v.seconds * 1000;
+    return new Date(v).getTime() || 0;
+  };
+
+  const recent    = entries.filter(e => toTs(e.createdAt) >= cutoff);
+  const validated = entries.filter(e => e.status === "Validé" && toTs(e.updatedAt) >= cutoff);
+  const inDebate  = entries.filter(e => e.status === "En débat");
+  const pending   = entries.filter(e => e.status === "En attente");
+  const openDos   = dossiers.filter(d => !["Validé", "Faction créée", "Refusé"].includes(d.statut));
+
+  const fields = [
+    { name: "📝 Nouvelles entrées",  value: `**${recent.length}** cette semaine`,    inline: true },
+    { name: "✅ Validées",           value: `**${validated.length}** cette semaine`, inline: true },
+    { name: "🟡 En débat",           value: `**${inDebate.length}** en cours`,       inline: true },
+    { name: "🔵 En attente",         value: `**${pending.length}** en cours`,        inline: true },
+    { name: "📂 Dossiers ouverts",   value: `**${openDos.length}** actifs`,          inline: true }
+  ];
+
+  if (recent.length) {
+    const list = recent.slice(0, 5).map(e => `• ${e.title}`).join("\n");
+    fields.push({ name: "Dernières entrées", value: list, inline: false });
+  }
+  if (openDos.length) {
+    const list = openDos.slice(0, 5).map(d => `• ${d.nomGroupe} (${d.statut})`).join("\n");
+    fields.push({ name: "Dossiers en cours", value: list, inline: false });
+  }
+
+  const payload = {
+    content: `<@&${GESTIONNAIRE_ROLE_ID}> — Résumé hebdomadaire du staff illégal`,
+    embeds: [{
+      title:       "📊 Résumé hebdomadaire FratWorld Illégal",
+      description: `Période : **7 derniers jours** · Généré le ${new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}`,
+      color:       0x4f86f7,
+      fields,
+      footer:      { text: "FratWorld RP — Staff Illégal" },
+      timestamp:   new Date().toISOString()
+    }]
+  };
+
+  const res = await fetch(DISCORD_WEBHOOK_URL, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Discord HTTP ${res.status}`);
+}
+
 // ── Entrées ───────────────────────────────────────────────────
 
 // type : "create" | "status_change" | "vote_result" | "deadline_reminder"

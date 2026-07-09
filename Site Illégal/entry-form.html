@@ -61,6 +61,15 @@
             <span class="form-hint">Sélectionne une ou plusieurs factions. Laisse vide si non applicable.</span>
           </div>
 
+          <div class="form-group">
+            <label>Tags <span style="color:var(--text-muted);font-weight:400">(optionnel)</span></label>
+            <div class="tags-input-wrap" id="tags-input-wrap">
+              <div id="tags-chips"></div>
+              <input type="text" id="tags-input" class="tags-text-input" placeholder="Ajouter un tag…" autocomplete="off" />
+            </div>
+            <span class="form-hint">Entrée ou virgule pour valider. Clic sur un tag pour le supprimer.</span>
+          </div>
+
           <!-- Deadline vote — visible uniquement pour propositions, géré par JS -->
           <div class="form-group" id="deadline-group" style="display:none">
             <label for="vote-deadline">Date limite de vote</label>

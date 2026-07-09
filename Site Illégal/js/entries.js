@@ -5,7 +5,7 @@ import { loadSettings, getVotesNeeded } from "./settings.js";
 import { logActivity } from "./activity.js";
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, arrayUnion, arrayRemove, deleteField
+  getDoc, getDocs, query, orderBy, where, onSnapshot, serverTimestamp, arrayUnion, arrayRemove, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 function authorInfo() {
@@ -38,6 +38,7 @@ export async function createEntry(data) {
     replacesTitle:   data.replacesTitle || null,
     voteDeadline:    data.voteDeadline  || null,
     documentUrl:     data.documentUrl   || null,
+    tags:            data.tags          || [],
     authorUid:  uid,
     authorName: name,
     createdAt:  serverTimestamp(),
@@ -61,7 +62,7 @@ export async function createEntry(data) {
 export async function updateEntry(id, data, original) {
   const { uid, name } = authorInfo();
 
-  const TRACKED = ["title", "section", "category", "description", "status", "replaces", "voteDeadline"];
+  const TRACKED = ["title", "section", "category", "description", "status", "replaces", "voteDeadline", "tags"];
   const changes = TRACKED
     .filter(f => String(data[f] ?? "") !== String(original[f] ?? ""))
     .map(f => ({ field: f, oldValue: original[f] ?? null, newValue: data[f] ?? null }));
@@ -82,6 +83,7 @@ export async function updateEntry(id, data, original) {
     replacesTitle: data.replacesTitle || null,
     voteDeadline:  data.voteDeadline  || null,
     documentUrl:   data.documentUrl   || null,
+    tags:          data.tags          || [],
     updatedAt:     serverTimestamp()
   };
 
@@ -213,6 +215,24 @@ export async function voteEntry(id, direction, currentFor, currentAgainst, curre
     update.status = "Refusé";
     finalStatus   = "Refusé";
   }
+
+  // Appliquer la délégation : si d'autres référents ont délégué leur vote à uid
+  try {
+    const delegQ    = query(collection(db, "delegations"), where("delegateTo", "==", uid));
+    const delegSnap = await getDocs(delegQ);
+    for (const d of delegSnap.docs) {
+      const delegUid = d.id;
+      // Ne pas voter en doublon si le délégant a déjà voté
+      const alreadyVoted = currentFor.includes(delegUid) || currentAgainst.includes(delegUid) || currentAbstain.includes(delegUid);
+      if (!alreadyVoted) {
+        const delegUpdate = { updatedAt: serverTimestamp() };
+        if (direction === "for")     delegUpdate.votesFor     = arrayUnion(delegUid);
+        else if (direction === "against") delegUpdate.votesAgainst = arrayUnion(delegUid);
+        else                          delegUpdate.votesAbstain = arrayUnion(delegUid);
+        await updateDoc(doc(db, "entries", id), delegUpdate);
+      }
+    }
+  } catch (_) { /* délégation silencieuse */ }
 
   await updateDoc(doc(db, "entries", id), update);
   await addHistory(id, "update", [{

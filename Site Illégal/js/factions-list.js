@@ -14,21 +14,24 @@ function authorInfo() {
 export async function createFaction(data) {
   const { uid, name } = authorInfo();
   return addDoc(collection(db, "factions"), {
-    nom:            data.nom.trim(),
-    type:           data.type,
-    statut:         data.statut || "Actif",
-    lead:           data.lead.trim(),
-    coLead:         data.coLead.trim(),
-    business:       data.business.trim(),
-    notes:          data.notes?.trim() || "",
-    dernierContact: data.dernierContact || null,
-    actif:          true,
-    leadHistory:    [],
-    authorUid:      uid,
-    authorName:     name,
-    createdAt:      serverTimestamp(),
-    updatedAt:      serverTimestamp(),
-    updatedBy:      name
+    nom:                   data.nom.trim(),
+    type:                  data.type,
+    statut:                data.statut || "Actif",
+    lead:                  data.lead.trim(),
+    coLead:                data.coLead.trim(),
+    business:              data.business.trim(),
+    notes:                 data.notes?.trim() || "",
+    dernierContact:        data.dernierContact || null,
+    telephoneRP:           data.telephoneRP?.trim() || "",
+    statutRelation:        data.statutRelation || "",
+    notesConfidentielles:  data.notesConfidentielles?.trim() || "",
+    actif:                 true,
+    leadHistory:           [],
+    authorUid:             uid,
+    authorName:            name,
+    createdAt:             serverTimestamp(),
+    updatedAt:             serverTimestamp(),
+    updatedBy:             name
   });
 }
 
@@ -40,16 +43,19 @@ export async function updateFaction(id, data) {
   const old     = oldSnap.exists() ? oldSnap.data() : {};
 
   const update = {
-    nom:            data.nom.trim(),
-    type:           data.type,
-    statut:         data.statut || "Actif",
-    lead:           data.lead.trim(),
-    coLead:         data.coLead.trim(),
-    business:       data.business.trim(),
-    notes:          data.notes?.trim() || "",
-    dernierContact: data.dernierContact || null,
-    updatedAt:      serverTimestamp(),
-    updatedBy:      name
+    nom:                   data.nom.trim(),
+    type:                  data.type,
+    statut:                data.statut || "Actif",
+    lead:                  data.lead.trim(),
+    coLead:                data.coLead.trim(),
+    business:              data.business.trim(),
+    notes:                 data.notes?.trim() || "",
+    dernierContact:        data.dernierContact || null,
+    telephoneRP:           data.telephoneRP?.trim() || "",
+    statutRelation:        data.statutRelation || "",
+    notesConfidentielles:  data.notesConfidentielles?.trim() || "",
+    updatedAt:             serverTimestamp(),
+    updatedBy:             name
   };
 
   const leadChanged   = data.lead.trim()   !== (old.lead   || "");
@@ -71,6 +77,31 @@ export async function updateFaction(id, data) {
 
 export async function deleteFaction(id) {
   await deleteDoc(doc(db, "factions", id));
+}
+
+// ── Événements faction (timeline) ─────────────────────────────
+
+export async function addFactionEvent(factionId, data) {
+  const { name } = authorInfo();
+  return addDoc(collection(db, "factions", factionId, "events"), {
+    title:       data.title.trim(),
+    description: data.description?.trim() || "",
+    date:        data.date || new Date().toISOString().slice(0, 10),
+    createdAt:   serverTimestamp(),
+    createdBy:   name
+  });
+}
+
+export async function deleteFactionEvent(factionId, eventId) {
+  return deleteDoc(doc(db, "factions", factionId, "events", eventId));
+}
+
+export function subscribeFactionEvents(factionId, callback) {
+  const q = query(
+    collection(db, "factions", factionId, "events"),
+    orderBy("date", "desc")
+  );
+  return onSnapshot(q, snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => callback([]));
 }
 
 // onSnapshot avec gestion d'erreur

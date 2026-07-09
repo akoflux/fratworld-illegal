@@ -4,6 +4,7 @@ import { requireAuth, isAdmin, getCurrentUser, getCurrentUserData } from "./auth
 import { loadSettings, saveSettings, getVotesNeeded, invalidateSettingsCache } from "./settings.js";
 import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.js";
 import { logActivity, getRecentActivity, ACTION_META } from "./activity.js";
+import { sendWeeklyRecap } from "./discord.js";
 import {
   collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -25,6 +26,7 @@ requireAuth(async () => {
 
   renderNavbar("admin");
   injectAnnouncePanel();
+  injectDiscordRecapBtn();
   loadUsers();
   loadActivityLog();
   await initConfig();
@@ -80,6 +82,40 @@ async function handleSaveConfig() {
     console.error(err);
   } finally {
     btn.disabled = false; btn.textContent = "Sauvegarder";
+  }
+}
+
+// ── Discord résumé hebdomadaire ───────────────────────────────
+
+function injectDiscordRecapBtn() {
+  const activityHeader = document.querySelector("#activity-log-count")?.closest(".panel-header");
+  if (!activityHeader || document.getElementById("discord-recap-btn")) return;
+  const btn = document.createElement("button");
+  btn.id = "discord-recap-btn";
+  btn.className = "btn btn-secondary btn-sm";
+  btn.textContent = "📤 Résumé Discord";
+  btn.style.cssText = "font-size:.75rem;padding:4px 10px";
+  btn.addEventListener("click", handleDiscordRecap);
+  activityHeader.appendChild(btn);
+}
+
+async function handleDiscordRecap() {
+  const btn = document.getElementById("discord-recap-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Envoi…"; }
+  try {
+    const [entriesSnap, dossSnap] = await Promise.all([
+      getDocs(query(collection(db, "entries"), orderBy("createdAt", "desc"))),
+      getDocs(collection(db, "dossiers"))
+    ]);
+    const entries  = entriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const dossiers = dossSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    await sendWeeklyRecap(entries, dossiers);
+    showToast("Résumé envoyé sur Discord.", "success");
+  } catch (err) {
+    showToast("Erreur lors de l'envoi Discord.", "error");
+    console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "📤 Résumé Discord"; }
   }
 }
 
@@ -147,7 +183,7 @@ function renderUserList(users) {
         <div class="user-row-avatar">${initials}</div>
         <div class="user-row-info">
           <div class="user-row-name">${esc(u.displayName || "—")} ${isMe ? `<span style="font-size:.7rem;color:var(--text-muted)">(toi)</span>` : ""}</div>
-          <div class="user-row-email">${esc(u.email || u.id)}</div>
+          <div class="user-row-email">${esc(u.email || u.id)}${u.lastSeen ? ` · Vu ${formatDate(u.lastSeen)}` : ""}</div>
         </div>
         <span class="role-badge ${u.role}">${u.role || "?"}</span>
         ${!isMe ? `

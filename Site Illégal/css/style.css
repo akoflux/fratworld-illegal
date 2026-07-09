@@ -3357,3 +3357,152 @@ mark.hl {
   height: 32px;
 }
 .filter-select-sm:focus { outline: none; border-color: var(--border-focus); }
+
+/* ── Tags input ──────────────────────────────────────────────── */
+.tags-input-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 5px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: text;
+}
+.tags-input-wrap:focus-within { border-color: var(--border-focus); }
+#tags-chips { display: contents; }
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--accent-fade, #4f86f720);
+  color: var(--accent);
+  border: 1px solid #4f86f740;
+  border-radius: 20px;
+  font-size: .75rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+}
+.tag-chip:hover { background: #4f86f730; }
+.tag-chip-x { opacity: .6; font-size: .7rem; }
+.tags-text-input {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: .85rem;
+  outline: none;
+  flex: 1;
+  min-width: 100px;
+}
+
+/* ── Template bar ────────────────────────────────────────────── */
+.template-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-main);
+  margin: -1px -1px 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+.template-bar-label {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  flex-shrink: 0;
+}
+.template-btn { font-size: .78rem; }
+
+/* ── Timeline faction ────────────────────────────────────────── */
+.timeline-list { padding: 20px 24px; }
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 24px;
+}
+.timeline-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 16px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+  border: 3px solid var(--bg-card);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.timeline-content { flex: 1; min-width: 0; }
+.timeline-date {
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.timeline-title {
+  font-weight: 600;
+  font-size: .92rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.timeline-desc {
+  font-size: .82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 4px;
+  white-space: pre-wrap;
+}
+.timeline-by { font-size: .72rem; color: var(--text-muted); }
+.timeline-del { margin-top: 4px; }
+
+/* ── Faction entries dashboard ───────────────────────────────── */
+.faction-stat-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 600;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.faction-entry-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+}
+.faction-entry-row:hover { background: var(--bg-hover); }
+.faction-entry-row:last-child { border-bottom: none; }
+.faction-entry-title { font-size: .88rem; font-weight: 600; color: var(--text-primary); }
+.faction-entry-meta { font-size: .75rem; color: var(--text-muted); }
+
+/* ── Admin règlement éditeur ─────────────────────────────────── */
+.article-editor-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.article-editor-row:last-child { border-bottom: none; }

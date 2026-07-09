@@ -7,6 +7,7 @@ let editMode      = false;
 let entryId       = null;
 let originalEntry = null;
 let allEntries    = [];
+let currentTags   = [];
 
 const SECTION_PARAM = getParam("section") || "decisions";
 
@@ -17,6 +18,34 @@ const CATS_BY_SECTION = {
 };
 
 const FACTIONS_FALLBACK = ["Cartel", "Mafia", "MC / Groupe atypique", "Gang", "Indépendant", "Toutes"];
+
+// ── Templates ─────────────────────────────────────────────────
+const TEMPLATES = [
+  {
+    label: "📌 Position officielle",
+    section: "decisions", category: "Position officielle", status: "Validé",
+    title: "Position officielle — ",
+    description: "Le staff illégal a tranché la position suivante :\n\n• \n• \n\nContexte : "
+  },
+  {
+    label: "📝 Proposition de règlement",
+    section: "propositions", category: "Proposition règlement", status: "En attente",
+    title: "Proposition — ",
+    description: "Je propose la règle/modification suivante :\n\nJustification :\n\nImpact attendu :\n\nExceptions éventuelles :"
+  },
+  {
+    label: "📐 Règle tranchée",
+    section: "decisions", category: "Règle tranchée", status: "Validé",
+    title: "Règle — ",
+    description: "Règle applicable immédiatement :\n\n• \n• \n\nSanctions en cas de non-respect :"
+  },
+  {
+    label: "🏴 Fiche faction",
+    section: "factions", category: "Fiche faction", status: "Validé",
+    title: "Fiche — ",
+    description: "Nom : \nType : \nLead : \nCo-Lead : \nActivité principale : \nZone d'influence : \n\nAccords :\n• \n\nContraintes RP :\n• "
+  }
+];
 
 requireAuth(async () => {
   if (isSpectateur()) { window.location.href = "/entries.html"; return; }
@@ -58,6 +87,8 @@ requireAuth(async () => {
   );
   buildReplacesSelect(editMode ? entryId : null);
   toggleDeadlineField(section);
+  buildTagsInput();
+  injectTemplateBar();
 
   if (editMode) prefillForm(originalEntry);
 
@@ -67,6 +98,90 @@ requireAuth(async () => {
   });
 });
 
+// ── Templates ─────────────────────────────────────────────────
+
+function injectTemplateBar() {
+  if (editMode) return;
+  const form = document.getElementById("entry-form");
+  const bar = document.createElement("div");
+  bar.className = "template-bar";
+  bar.innerHTML = `
+    <span class="template-bar-label">Modèle :</span>
+    ${TEMPLATES.map((t, i) => `
+      <button type="button" class="btn btn-secondary btn-sm template-btn" data-idx="${i}">${t.label}</button>
+    `).join("")}`;
+  form.prepend(bar);
+  bar.querySelectorAll(".template-btn").forEach(btn => {
+    btn.addEventListener("click", () => applyTemplate(TEMPLATES[+btn.dataset.idx]));
+  });
+}
+
+function applyTemplate(tpl) {
+  const sectionEl = document.getElementById("section-input");
+  const section   = tpl.section || sectionEl.value;
+  sectionEl.value = section;
+  buildCategorySelect(section);
+  renderNavbar(section);
+  toggleDeadlineField(section);
+
+  document.getElementById("title").value       = tpl.title;
+  document.getElementById("description").value = tpl.description;
+  document.getElementById("status").value      = tpl.status || "";
+
+  const catOpt = document.querySelector(`#category option[value="${tpl.category}"]`);
+  if (catOpt) catOpt.selected = true;
+
+  document.getElementById("title").focus();
+  showToast(`Modèle "${tpl.label}" appliqué.`, "success");
+}
+
+// ── Tags ──────────────────────────────────────────────────────
+
+function buildTagsInput() {
+  const input = document.getElementById("tags-input");
+  if (!input) return;
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag(input.value);
+    } else if (e.key === "Backspace" && !input.value && currentTags.length) {
+      removeTag(currentTags[currentTags.length - 1]);
+    }
+  });
+  input.addEventListener("blur", () => addTag(input.value));
+}
+
+function addTag(raw) {
+  const tag = raw.trim().replace(/,+$/, "").trim().toLowerCase();
+  const input = document.getElementById("tags-input");
+  if (!tag || currentTags.includes(tag) || currentTags.length >= 8) {
+    if (input) input.value = "";
+    return;
+  }
+  currentTags.push(tag);
+  renderTagChips();
+  if (input) input.value = "";
+}
+
+function removeTag(tag) {
+  currentTags = currentTags.filter(t => t !== tag);
+  renderTagChips();
+}
+
+function renderTagChips() {
+  const container = document.getElementById("tags-chips");
+  if (!container) return;
+  container.innerHTML = currentTags.map(t =>
+    `<span class="tag-chip" data-tag="${t}">${t} <span class="tag-chip-x">×</span></span>`
+  ).join("");
+  container.querySelectorAll(".tag-chip").forEach(chip => {
+    chip.addEventListener("click", () => removeTag(chip.dataset.tag));
+  });
+}
+
+// ── Deadline ──────────────────────────────────────────────────
+
 function toggleDeadlineField(section) {
   const isPropo = section === "propositions";
   const group   = document.getElementById("deadline-group");
@@ -74,7 +189,6 @@ function toggleDeadlineField(section) {
   if (group)  group.style.display  = isPropo ? "" : "none";
   if (docGrp) docGrp.style.display = isPropo ? "" : "none";
 
-  // Pour les propositions, la description devient optionnelle si un doc est joint
   const label = document.getElementById("description-label");
   const hint  = document.getElementById("description-hint");
   if (label) label.innerHTML = isPropo
@@ -124,6 +238,10 @@ function prefillForm(e) {
     const docField = document.getElementById("document-url");
     if (docField) docField.value = e.documentUrl;
   }
+  if (Array.isArray(e.tags) && e.tags.length) {
+    currentTags = [...e.tags];
+    renderTagChips();
+  }
 
   if (e.category) {
     const opt = document.querySelector(`#category option[value="${e.category}"]`);
@@ -153,6 +271,9 @@ async function handleSubmit(ev) {
     ? (document.getElementById("document-url")?.value?.trim() || null)
     : null;
 
+  // Flush any pending tag
+  addTag(document.getElementById("tags-input")?.value || "");
+
   if (!title)    { showToast("Le titre est requis.", "error"); return; }
   if (!category) { showToast("La catégorie est requise.", "error"); return; }
   if (!status)   { showToast("Le statut est requis.", "error"); return; }
@@ -170,7 +291,11 @@ async function handleSubmit(ev) {
   btn.disabled = true;
   btn.textContent = "Enregistrement…";
 
-  const data = { title, section, category, status, description, factions, replaces: replacesId, replacesTitle, voteDeadline, documentUrl };
+  const data = {
+    title, section, category, status, description, factions,
+    replaces: replacesId, replacesTitle, voteDeadline, documentUrl,
+    tags: [...currentTags]
+  };
 
   try {
     if (editMode) {

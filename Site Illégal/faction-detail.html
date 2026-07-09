@@ -39,11 +39,133 @@
       </div>
     </div>
 
+    <!-- Entrées liées (dashboard par faction) -->
+    <div class="detail-card" style="margin-top:20px">
+      <div class="card-header-bar">
+        <h3>Entrées liées</h3>
+        <span id="faction-entries-count" style="font-size:.75rem;color:var(--text-muted)">—</span>
+      </div>
+      <div id="faction-entries-body">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="detail-card" style="margin-top:20px">
+      <div class="card-header-bar">
+        <h3>Timeline</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="timeline-count" style="font-size:.75rem;color:var(--text-muted)">—</span>
+          <button id="add-event-btn" class="btn btn-secondary btn-sm" style="display:none">+ Événement</button>
+        </div>
+      </div>
+      <div id="timeline-body">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
 <!-- Overlay modal -->
 <div class="modal-overlay" id="membre-modal-overlay" style="display:none"></div>
+<div class="modal-overlay" id="faction-modal-overlay" style="display:none"></div>
+<div class="modal-overlay" id="event-modal-overlay" style="display:none"></div>
+
+<!-- Modal modifier faction -->
+<div id="faction-info-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;width:100%;max-width:560px;padding:20px;max-height:90vh;overflow-y:auto">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 style="margin-bottom:20px;font-size:1.1rem">Modifier les informations</h2>
+    <form id="faction-info-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>Nom <span class="required">*</span></label>
+          <input id="fi-nom" type="text" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="fi-type" class="form-control">
+            <option>Gang</option><option>Mafia</option><option>Cartel</option>
+            <option>MC / Groupe atypique</option><option>Indépendant</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Lead</label>
+          <input id="fi-lead" type="text" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Co-Lead</label>
+          <input id="fi-colead" type="text" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Activité / Business</label>
+          <input id="fi-business" type="text" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Statut faction</label>
+          <select id="fi-statut" class="form-control">
+            <option>Actif</option><option>Inactif</option><option>Dissout</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Téléphone RP</label>
+          <input id="fi-tel" type="text" class="form-control" placeholder="Ex : 555-1234" />
+        </div>
+        <div class="form-group">
+          <label>Statut relation staff</label>
+          <select id="fi-relation" class="form-control">
+            <option value="">— Non défini —</option>
+            <option value="Allié">🤝 Allié</option>
+            <option value="Neutre">⚖️ Neutre</option>
+            <option value="Surveillé">👁 Surveillé</option>
+            <option value="Hostile">⚠️ Hostile</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dernier contact</label>
+          <input id="fi-contact" type="date" class="form-control" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes internes</label>
+        <textarea id="fi-notes" class="form-control" style="min-height:80px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Notes confidentielles <span style="font-size:.72rem;color:var(--text-muted)">(admin seulement)</span></label>
+        <textarea id="fi-notes-conf" class="form-control" style="min-height:80px"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="faction-modal-cancel" class="btn btn-secondary">Annuler</button>
+        <button type="submit" id="faction-modal-submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal ajouter événement timeline -->
+<div id="event-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;width:100%;max-width:440px;padding:20px">
+  <div class="form-card" style="background:var(--bg-card);border:1px solid var(--border)">
+    <h2 style="margin-bottom:20px;font-size:1.1rem">Ajouter un événement</h2>
+    <form id="event-form">
+      <div class="form-group">
+        <label>Titre <span class="required">*</span></label>
+        <input id="ev-title" type="text" class="form-control" required />
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input id="ev-date" type="date" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="ev-desc" class="form-control" style="min-height:80px" placeholder="Contexte, décision, notes…"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="event-modal-cancel" class="btn btn-secondary">Annuler</button>
+        <button type="submit" id="event-modal-submit" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- Modal ajouter/modifier membre -->
 <div id="membre-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;width:100%;max-width:460px;padding:20px">

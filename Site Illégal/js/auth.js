@@ -4,7 +4,7 @@ import {
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { doc, getDoc, getDocs, collection, query, where, documentId } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, getDoc, getDocs, setDoc, collection, query, where, documentId, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let _currentUser     = null;
 let _currentUserData = null;
@@ -44,6 +44,7 @@ export function requireAuth(callback) {
     }
     _currentUser     = user;
     _currentUserData = userData;
+    setDoc(doc(db, "users", user.uid), { lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
     callback(user, userData);
   });
 }
