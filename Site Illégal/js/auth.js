@@ -12,13 +12,16 @@ let _currentUserData = null;
 export async function login(email, password) {
   const cred     = await signInWithEmailAndPassword(auth, email, password);
   const userData = await fetchUserData(cred.user.uid).catch(() => null);
-  addDoc(collection(db, "activityLog"), {
-    action: "user_login",
-    details: {},
-    uid: cred.user.uid,
-    by: userData?.displayName || cred.user.email || "?",
-    at: serverTimestamp()
-  }).catch(() => {});
+  // Await pour que l'écriture soit confirmée avant la redirection de page-login.js
+  try {
+    await addDoc(collection(db, "activityLog"), {
+      action: "user_login",
+      details: {},
+      uid: cred.user.uid,
+      by: userData?.displayName || cred.user.email || "?",
+      at: serverTimestamp()
+    });
+  } catch (_) {}
   return cred.user;
 }
 

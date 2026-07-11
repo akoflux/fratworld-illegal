@@ -55,5 +55,8 @@ export const ACTION_META = {
   config_save:      { icon: "⚙️", text: d => `Config : ${d.referentCount} référents` },
   announce_publish: { icon: "📢", text: _ => `Annonce publiée` },
   announce_delete:  { icon: "🗑️", text: _ => `Annonce supprimée` },
-  user_login:       { icon: "🔑", text: _ => `Connexion` }
+  user_login:       { icon: "🔑", text: _ => `Connexion` },
+  entry_delete:     { icon: "🗑️", text: d => `Entrée supprimée${d.title ? ` : "${d.title}"` : ""}` },
+  entry_archive:    { icon: "🗄",  text: d => `Entrée archivée${d.title ? ` : "${d.title}"` : ""}` },
+  dossier_vote:     { icon: "🗳",  text: d => `Vote dossier ${d.direction === "for" ? "Pour" : "Contre"} : "${d.nom || ""}"` }
 };

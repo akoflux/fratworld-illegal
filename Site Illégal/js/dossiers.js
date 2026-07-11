@@ -98,6 +98,7 @@ export async function voteDossier(id, dossier, direction, reason = "") {
   if (thresholdJustReached) updates.statut = "En attente d'entretien";
 
   await updateDoc(doc(db, "dossiers", id), updates);
+  logActivity("dossier_vote", { id, nom: dossier.nomGroupe, direction });
 
   if (thresholdJustReached) {
     await sendDossierStatusChange(
@@ -113,11 +114,12 @@ export async function voteDossier(id, dossier, direction, reason = "") {
 }
 
 // Valider l'entretien → En attente d'installation
-export async function validerEntretien(id) {
+export async function validerEntretien(id, nom = "") {
   await updateDoc(doc(db, "dossiers", id), {
     statut:    "En attente d'installation",
     updatedAt: serverTimestamp()
   });
+  logActivity("dossier_status", { id, nom, newStatut: "En attente d'installation" });
 }
 
 // Valider l'installation → Faction créée + création automatique de la faction
@@ -155,6 +157,7 @@ export async function validerInstallation(id, dossier) {
   const settings    = await loadSettings();
   const votesNeeded = getVotesNeeded(settings);
   await sendDossierNotification("dossier_archive", { id, ...dossier, statut: "Faction créée" }, votesNeeded);
+  logActivity("dossier_status", { id, nom: dossier.nomGroupe, newStatut: "Faction créée" });
 
   return factionRef.id;
 }
@@ -175,6 +178,7 @@ export async function refuserDossier(id, dossier, reason) {
   });
 
   await sendDossierNotification("dossier_archive", { id, ...dossier, statut: "Refusé" }, votesNeeded);
+  logActivity("dossier_status", { id, nom: dossier.nomGroupe, newStatut: "Refusé" });
 }
 
 // Changement de statut via badge cliquable — gère workflow + Discord

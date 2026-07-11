@@ -6,7 +6,7 @@ import { renderNavbar, showToast, confirmModal, formatDate } from "./ui-shared.j
 import { logActivity, subscribeActivity, getUserActivity, ACTION_META } from "./activity.js";
 import { sendWeeklyRecap } from "./discord.js";
 import {
-  collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit
+  collection, getDocs, getDoc, setDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -28,6 +28,7 @@ requireAuth(async () => {
   injectAnnouncePanel();
   injectDiscordRecapBtn();
   loadUsers();
+  loadDelegations();
   startActivitySubscription();
   await initConfig();
   await initAnnouncement();
@@ -210,6 +211,42 @@ window.closeUserActivityModal = () => {
   const modal = document.getElementById("user-activity-modal");
   if (modal) modal.style.display = "none";
 };
+
+// ── Délégations ───────────────────────────────────────────────
+
+async function loadDelegations() {
+  const container = document.getElementById("deleg-list");
+  const countEl   = document.getElementById("deleg-count");
+  if (!container) return;
+  try {
+    const snap  = await getDocs(collection(db, "delegations"));
+    const deleg = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (countEl) countEl.textContent = deleg.length
+      ? `${deleg.length} délégation${deleg.length > 1 ? "s" : ""} active${deleg.length > 1 ? "s" : ""}`
+      : "Aucune";
+
+    if (!deleg.length) {
+      container.innerHTML = `<div style="padding:8px 0;color:var(--text-muted);font-size:.82rem">Aucune délégation de vote active.</div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${deleg.map(d => `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--bg-main)">
+            <span style="font-size:.82rem;font-weight:600;color:var(--text-primary)">${esc(d.delegateFromName || d.id)}</span>
+            <span style="font-size:.75rem;color:var(--text-muted)">→</span>
+            <span style="font-size:.82rem;font-weight:600;color:var(--accent)">${esc(d.delegateToName || d.delegateTo || "?")}</span>
+            ${d.delegatedAt ? `<span style="margin-left:auto;font-size:.72rem;color:var(--text-muted)">${formatDate(d.delegatedAt)}</span>` : ""}
+          </div>`).join("")}
+      </div>`;
+  } catch (err) {
+    if (countEl) countEl.textContent = "Erreur";
+    if (container) container.innerHTML = `<div style="color:var(--s-refused);font-size:.82rem">Impossible de charger les délégations.</div>`;
+    console.error(err);
+  }
+}
 
 // ── Utilisateurs ──────────────────────────────────────────────
 

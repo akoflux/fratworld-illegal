@@ -108,15 +108,17 @@ export async function updateEntry(id, data, original) {
   }
 }
 
-export async function deleteEntry(id) {
+export async function deleteEntry(id, title = "") {
   await deleteDoc(doc(db, "entries", id));
+  logActivity("entry_delete", { entryId: id, title });
 }
 
-export async function archiveEntry(id) {
+export async function archiveEntry(id, title = "") {
   await updateDoc(doc(db, "entries", id), {
     status: "Archivée",
     updatedAt: serverTimestamp()
   });
+  logActivity("entry_archive", { entryId: id, title });
 }
 
 export async function markDeadlineReminderSent(id) {

@@ -416,7 +416,7 @@ async function handleDelete() {
   );
   if (!ok) return;
   try {
-    await archiveEntry(entry.id);
+    await archiveEntry(entry.id, entry.title);
     showToast("Entrée archivée.", "success");
     setTimeout(() => window.location.href = `/entries.html?section=${entry.section || "decisions"}`, 800);
   } catch (err) {

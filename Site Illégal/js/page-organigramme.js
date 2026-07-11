@@ -1,7 +1,7 @@
 import { db } from "./firebase-init.js";
-import { requireAuth, isAdmin } from "./auth.js";
+import { requireAuth, isAdmin, getCurrentUser } from "./auth.js";
 import { renderNavbar } from "./ui-shared.js";
-import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, query, orderBy, getDocsFromServer } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const HIERARCHY = [
   { poste: "Responsable",               icon: "👑", color: "#f97316", label: "Responsable" },
@@ -21,10 +21,11 @@ requireAuth(async () => {
   }
 
   try {
+    // getDocsFromServer : ignore le cache local pour éviter les données stale (poste non à jour)
     const q     = query(collection(db, "users"), orderBy("displayName", "asc"));
-    const snap  = await getDocs(q);
+    const snap  = await getDocsFromServer(q);
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderOrg(users);
+    renderOrg(users, getCurrentUser()?.uid);
   } catch (err) {
     console.error(err);
     document.getElementById("org-container").innerHTML =
@@ -32,7 +33,7 @@ requireAuth(async () => {
   }
 });
 
-function renderOrg(users) {
+function renderOrg(users, currentUid) {
   const byPoste = {};
   const unassigned = [];
 
@@ -69,7 +70,7 @@ function renderOrg(users) {
     if (!members.length) {
       html += orgNodeEmpty(icon, color, label);
     } else {
-      html += members.map(u => orgNodeFull(u, icon, color, label)).join(`<div class="orgchart-peer-sep"></div>`);
+      html += members.map(u => orgNodeFull(u, icon, color, label, false, u.id === currentUid)).join(`<div class="orgchart-peer-sep"></div>`);
     }
     html += `</div>`;
 
@@ -94,7 +95,7 @@ function renderOrg(users) {
     if (!members.length) {
       html += orgNodeEmpty(icon, color, label, true);
     } else {
-      html += members.map(u => orgNodeFull(u, icon, color, label, true)).join(`<div style="height:8px"></div>`);
+      html += members.map(u => orgNodeFull(u, icon, color, label, true, u.id === currentUid)).join(`<div style="height:8px"></div>`);
     }
     html += `</div>`;
   }
@@ -121,13 +122,14 @@ function renderOrg(users) {
   container.innerHTML = html;
 }
 
-function orgNodeFull(u, icon, color, label, small = false) {
-  const size = small ? "orgchart-card-sm" : "orgchart-card";
+function orgNodeFull(u, icon, color, label, small = false, isMe = false) {
+  const size    = small ? "orgchart-card-sm" : "orgchart-card";
+  const meStyle = isMe ? `box-shadow:0 0 0 2px ${color},0 0 12px ${color}44;` : "";
   return `
-    <div class="${size}" style="border-top:3px solid ${color}">
+    <div class="${size}" style="border-top:3px solid ${color};${meStyle}">
       <div class="orgchart-avatar" style="background:${color}22;color:${color}">${initials(u.displayName)}</div>
       <div class="orgchart-info">
-        <div class="orgchart-name">${esc(u.displayName || u.email || "—")}</div>
+        <div class="orgchart-name">${esc(u.displayName || u.email || "—")}${isMe ? ` <span style="font-size:.68rem;color:var(--text-muted)">(vous)</span>` : ""}</div>
         <div class="orgchart-poste" style="color:${color}">${icon} ${label}</div>
         <span class="role-badge ${u.role}" style="margin-top:6px;display:inline-block">${u.role}</span>
       </div>
