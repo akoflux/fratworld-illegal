@@ -1,6 +1,6 @@
 [build]
   base    = "Site Illégal"
-  publish = "Site Illégal"
+  publish = "."
 
 [[redirects]]
   from   = "/"

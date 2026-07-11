@@ -110,20 +110,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ── Journal d'activité (Point 20 / activity.js) ────────────
+    // ── Journal d'activité ─────────────────────────────────────
     match /activityLog/{logId} {
-      // Tout staff authentifié peut lire (outil interne, queries filtrées côté client/admin)
-      allow read:           if isAuthenticated();
-      allow create:         if isAuthenticated();
+      allow read:           if request.auth != null;
+      allow create:         if request.auth != null;
       allow update, delete: if false;
     }
 
-    // ── Délégation de vote (Point 12) ─────────────────────────
+    // ── Délégation de vote ─────────────────────────────────────
     match /delegations/{delegatorUid} {
-      allow read:   if isReferentOrAdmin();
-      allow create: if isReferentOrAdmin() && delegatorUid == request.auth.uid;
-      allow update: if isReferentOrAdmin() && delegatorUid == request.auth.uid;
-      allow delete: if isReferentOrAdmin() && delegatorUid == request.auth.uid;
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null && delegatorUid == request.auth.uid;
+      allow update: if request.auth != null && delegatorUid == request.auth.uid;
+      allow delete: if request.auth != null && delegatorUid == request.auth.uid;
     }
 
     // ── Règlement versionné (Point 6) ─────────────────────────
