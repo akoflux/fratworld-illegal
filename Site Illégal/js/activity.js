@@ -24,11 +24,17 @@ export async function getRecentActivity(n = 50) {
 }
 
 // Abonnement temps réel — retourne la fonction de désabonnement
+// Sans orderBy serveur-side pour éviter l'exigence d'un index Firestore sur une nouvelle collection
 export function subscribeActivity(n = 100, callback) {
-  const q = query(collection(db, "activityLog"), orderBy("at", "desc"), limit(n));
+  const q = query(collection(db, "activityLog"), limit(n));
   return onSnapshot(q,
-    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })), null),
-    err  => callback(null, err)
+    snap => {
+      const logs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.at?.seconds ?? 0) - (a.at?.seconds ?? 0));
+      callback(logs, null);
+    },
+    err => callback(null, err)
   );
 }
 
