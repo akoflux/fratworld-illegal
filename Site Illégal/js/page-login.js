@@ -3,8 +3,11 @@ import { login } from "./auth.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Si déjà connecté, rediriger directement.
+// _loggingIn bloque la redirection automatique pendant le flow de login explicite
+// pour que addDoc dans login() ait le temps de s'exécuter avant la navigation.
+let _loggingIn = false;
 onAuthStateChanged(auth, user => {
-  if (user) window.location.href = "/index.html";
+  if (user && !_loggingIn) window.location.href = "/index.html";
 });
 
 const form     = document.getElementById("login-form");
@@ -46,11 +49,13 @@ form.addEventListener("submit", async e => {
 
   submitEl.disabled     = true;
   submitEl.textContent  = "Connexion…";
+  _loggingIn = true;
 
   try {
     await login(email, password);
     window.location.href = "/index.html";
   } catch (err) {
+    _loggingIn = false;
     showError(ERROR_MESSAGES[err.code] || "Erreur inattendue. Réessaie.");
     submitEl.disabled    = false;
     submitEl.textContent = "Se connecter";
